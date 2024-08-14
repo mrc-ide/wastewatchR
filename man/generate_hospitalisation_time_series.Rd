@@ -12,6 +12,7 @@ and hospital occupancy.
 }
 \seealso{
 Other post-processing: 
+\code{\link{generate_infections_time_series}()},
 \code{\link{generate_number_shedding_time_series}()},
 \code{\link{generate_symptom_onset_time_series}()}
 }

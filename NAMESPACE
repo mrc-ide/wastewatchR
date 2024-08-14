@@ -2,6 +2,9 @@
 
 export(calculate_shedding)
 export(generate_hospitalisation_time_series)
+export(generate_infections_time_series)
 export(generate_number_shedding_time_series)
 export(generate_symptom_onset_time_series)
 export(simulate_branching_process)
+import(dplyr)
+import(tidyr)

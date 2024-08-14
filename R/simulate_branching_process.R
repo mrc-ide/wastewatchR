@@ -189,6 +189,28 @@ calculate_shedding <- function(day, infection_counts, shedding_dist) {
   return(sum(shedding_contributions))
 }
 
+
+#' Convert stochastic realisation of branching process into number of new infections time-series
+#'
+#' @family post-processing
+#' @export
+generate_infections_time_series <- function(branching_process_output, population) {
+
+  max_day <- ceiling(max(branching_process_output$time_infection, na.rm = TRUE))
+  days <- seq(0, max_day, by = 1)
+
+  # Create a dataframe with counts of infections per day
+  infection_counts <- branching_process_output |>
+    mutate(day_infection = floor(time_infection)) |>
+    group_by(day_infection) |>
+    summarise(new_infections = n(), .groups = 'drop') |>
+    complete(day_infection = seq(0, max_day, by = 1),
+             fill = list(new_infections = 0)) |>
+    mutate(new_infections_per_thousand = 1000 * new_infections / population)
+  return(infection_counts)
+
+}
+
 #' Convert stochastic realisation of branching process into number shedding time-series
 #'
 #' This function converts a branching process output into time-series of number shedding,
@@ -200,19 +222,13 @@ generate_number_shedding_time_series <- function(branching_process_output, shedd
 
   max_day <- ceiling(max(branching_process_output$time_infection, na.rm = TRUE))
   days <- seq(0, max_day, by = 1)
-
-  # Create a dataframe with counts of infections per day
-  infection_counts <- branching_process_output %>%
-    mutate(day_infection = floor(time_infection)) %>%
-    group_by(day_infection) %>%
-    summarise(new_infections = n(), .groups = 'drop') %>%
-    complete(day_infection = seq(0, max_day, by = 1),
-             fill = list(new_infections = 0))
+  infection_counts <- generate_infections_time_series(branching_process_output, population)
 
   # Apply the function for each day
-  shedding_results <- tibble(day = days) %>%
-    rowwise() %>%
-    mutate(shedding_value = calculate_shedding(day, infection_counts, shedding_dist))
+  shedding_results <- tibble(day = days) |>
+    rowwise() |>
+    mutate(shedding_value = calculate_shedding(day, infection_counts, shedding_dist)) %>%
+    mutate(shedding_value_per_thousand = 1000 * shedding_value / population)
   return(shedding_results)
 
 }
@@ -222,18 +238,21 @@ generate_number_shedding_time_series <- function(branching_process_output, shedd
 #' This function converts a branching process output into time-series of symptom onsets
 #'
 #' @family post-processing
+#' @import dplyr
+#' @import tidyr
 #' @export
 generate_symptom_onset_time_series <- function(branching_process_output, population) {
 
   ## Calculating daily incidence of symptom onsets
-  symptom_onset_incidence <- branching_process_output %>%
-    filter(symptomatic == 1) %>%
-    mutate(time_symptom_onset_floor = floor(time_symptom_onset)) %>%
-    group_by(time_symptom_onset_floor) %>%
-    summarise(incidence_symptom_onset = n()) %>%
+  symptom_onset_incidence <- branching_process_output |>
+    filter(symptomatic == 1) |>
+    mutate(time_symptom_onset_floor = floor(time_symptom_onset)) |>
+    group_by(time_symptom_onset_floor) |>
+    summarise(incidence_symptom_onset = n()) |>
     complete(time_symptom_onset_floor = seq(0, max(time_symptom_onset_floor, na.rm = TRUE), by = 1),
-             fill = list(incidence_symptom_onset = 0)) %>%
-    rename(day = time_symptom_onset_floor)
+             fill = list(incidence_symptom_onset = 0)) |>
+    rename(day = time_symptom_onset_floor) %>%
+    mutate(incidence_symptom_onset_per_thousand = 1000 * incidence_symptom_onset / population)
   return(symptom_onset_incidence)
 
 }
@@ -248,13 +267,13 @@ generate_symptom_onset_time_series <- function(branching_process_output, populat
 generate_hospitalisation_time_series <- function(branching_process_output, population) {
 
   ## Calculating daily incidence of hospitalisations
-  hospitalisation_incidence <- branching_process_output %>%
-    filter(hospitalised == 1) %>%
-    mutate(time_hospitalised_floor = floor(time_hospitalised)) %>%
-    group_by(time_hospitalised_floor) %>%
-    summarise(incidence_hospitalisation = n()) %>%
+  hospitalisation_incidence <- branching_process_output |>
+    filter(hospitalised == 1) |>
+    mutate(time_hospitalised_floor = floor(time_hospitalised)) |>
+    group_by(time_hospitalised_floor) |>
+    summarise(incidence_hospitalisation = n()) |>
     complete(time_hospitalised_floor = seq(0, max(time_hospitalised_floor, na.rm = TRUE), by = 1),
-             fill = list(incidence_hospitalisation = 0)) %>%
+             fill = list(incidence_hospitalisation = 0)) |>
     rename(day = time_hospitalised_floor)
 
   ## Calculating number of individuals in hospital on any given day
@@ -266,8 +285,8 @@ generate_hospitalisation_time_series <- function(branching_process_output, popul
   hospital_occupancy <- data.frame(day = days, hospitalised = hospital_occupancy)
 
   ## Merging dataframes together
-  overall_hospital_df <- hospitalisation_incidence %>%
-    left_join(hospital_occupancy, by = "day") %>%
+  overall_hospital_df <- hospitalisation_incidence |>
+    left_join(hospital_occupancy, by = "day") |>
     mutate(incidence_hospitalisation_per_thousand = 1000 * incidence_hospitalisation / population,
            hospitalised_per_thousand = 1000 * hospitalised / population)
   return(overall_hospital_df)
