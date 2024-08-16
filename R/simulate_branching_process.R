@@ -201,10 +201,10 @@ generate_infections_time_series <- function(branching_process_output, population
 
   # Create a dataframe with counts of infections per day
   infection_counts <- branching_process_output |>
-    mutate(day_infection = floor(time_infection)) |>
-    group_by(day_infection) |>
+    mutate(day = floor(time_infection)) |>
+    group_by(day) |>
     summarise(new_infections = n(), .groups = 'drop') |>
-    complete(day_infection = seq(0, max_day, by = 1),
+    complete(day = seq(0, max_day, by = 1),
              fill = list(new_infections = 0)) |>
     mutate(new_infections_per_thousand = 1000 * new_infections / population)
   return(infection_counts)
