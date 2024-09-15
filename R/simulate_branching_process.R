@@ -88,7 +88,7 @@ simulate_branching_process <- function(
     if (seeding_cases == 0) {
       seeding_cases <- 1
     }
-    time_spillover <- ifelse(outbreak_index == 1, 0, min(tdf$time_infection[tdf$outbreak == outbreak_index]) + rexp(1, rate = annual_spillover_rate / 365))
+    time_spillover <- ifelse(outbreak_index == 1, 0, min(tdf$time_infection[tdf$outbreak == (outbreak_index - 1)]) + rexp(1, rate = annual_spillover_rate / 365))
 
     # Initialising the model with the seeding cases
     seeding_cases_time_infection <- time_spillover + seq(from = 0, to = 0.01, length.out = seeding_cases) ## Time of infection for seeding cases
@@ -167,7 +167,7 @@ simulate_branching_process <- function(
     while (any(tdf$offspring_generated[tdf$outbreak == outbreak_index] == FALSE)) {
 
       # Selecting the earliest infection for which we haven't generated offspring
-      time_infection_index <- min(tdf$time_infection[tdf$offspring_generated == 0 & !is.na(tdf$time_infection) & tdf$outbreak == outbreak_index])
+      time_infection_index <- min(tdf$time_infection[tdf$offspring_generated == FALSE & !is.na(tdf$time_infection) & tdf$outbreak == outbreak_index])
 
       # Extracting information on the "parent" infection whose offspring are being generated
       parent_idx <- which(tdf$time_infection == time_infection_index & !tdf$offspring_generated)[1] # get the id of the earliest unsimulated infection
