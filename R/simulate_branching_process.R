@@ -8,7 +8,7 @@
 simulate_branching_process <- function(
 
     ## Offspring distribution parameters
-    mn_offspring = 0.85,
+    mn_offspring = 3,
     disp_offspring = 0.9,
 
     ## Natural history parameters
@@ -165,7 +165,7 @@ simulate_branching_process <- function(
     ## This loops through each infection individually and generates offspring, and the status (symptoms, hospitalisation etc) of all of these offspring
     ## Note that we have check_final_size to cap how long we simulate for, but that when you reach this threshold you might have infections for which
     ## you haven't generated offspring for.
-    while (any(tdf$offspring_generated[tdf$outbreak == outbreak_index] == FALSE)) {
+    while (any(tdf$offspring_generated[tdf$outbreak == outbreak_index] == FALSE) & nrow(tdf) <= check_final_size) {
 
       # Selecting the earliest infection for which we haven't generated offspring
       time_infection_index <- min(tdf$time_infection[tdf$offspring_generated == FALSE & !is.na(tdf$time_infection) & tdf$outbreak == outbreak_index])
