@@ -8,7 +8,7 @@
 simulate_branching_process <- function(
 
     ## Offspring distribution parameters
-    mn_offspring = 3,
+    initial_mn_offspring = 3,
     disp_offspring = 0.9,
 
     ## Natural history parameters
@@ -29,6 +29,11 @@ simulate_branching_process <- function(
     infection_to_seroconversion_dist = function(n) { rgamma(n, shape = 56, rate = 2) }, ## poss need to reverse rate and shape - TBD
     seroconversion_to_seroreversion_dist = function(n) { rgamma(n, shape = 730, rate = 2) }, ## poss need to reverse rate and shape - TBD
 
+    ## Evolution related parameters
+    prob_beneficial_mutation = 0.01,
+    beneficial_mutation_effect_dist = function(n) {rexp(n, rate = 20)}
+    max_mn_offspring = 4
+
     ## Simulation parameters
     annual_spillover_rate = 2,
     spillover_seeding_cases_dist = function() { rpois(1, lambda = 5) },
@@ -41,12 +46,12 @@ simulate_branching_process <- function(
 
   ## Setting up the Offspring Distribution
   if (disp_offspring <= 1.0) {
-    offspring_fun <- function(n, susc) {
+    offspring_fun <- function(n, susc, mn_offspring) {
       new_mn <- mn_offspring * susc/population
       rpois(n = n, lambda = new_mn)
     }
   } else {
-    offspring_fun <- function(n, susc) {
+    offspring_fun <- function(n, susc, mn_offspring) {
       new_mn <- mn_offspring * susc/population
       size <- new_mn/(disp_offspring - 1)
       rnbinom(n = n, size = size, mu = new_mn)
@@ -69,6 +74,7 @@ simulate_branching_process <- function(
     time_seroreversion = numeric(check_final_size),
     n_offspring = integer(check_final_size),
     outbreak = integer(check_final_size),
+    infection_mn_offspring = numeric(check_final_size),
     seeding = NA_character_,
     offspring_generated = FALSE,
     stringsAsFactors = FALSE
@@ -155,6 +161,7 @@ simulate_branching_process <- function(
       time_seroreversion = seeding_case_time_serorevert,
       n_offspring = NA_integer_,
       outbreak = outbreak_index,
+      infection_mn_offspring = initial_mn_offspring,
       seeding = "seeding",
       offspring_generated = FALSE,
       stringsAsFactors = FALSE
@@ -175,12 +182,13 @@ simulate_branching_process <- function(
       parent_gen <- tdf$infection_generation[parent_idx]                                            # generation of the earliest unsimulated infection
       parent_symptomatic <- tdf$symptomatic[parent_idx]                                             # whether the earliest unsimulated infection is symptomatic
       parent_time_symptom_onset <- tdf$time_symptom_onset[parent_idx]                               # if symptomatic, the time when the earliest unsimulated infection develops symptoms
+      parent_mn_offspring <- tdf$infection_mn_offspring[parent_idx]
 
       # Calculate total number of infections in the dataframe currently (so we can figure out how to label the new infections)
       current_max_id <- max(tdf$infection_id)
 
       # Calculating number of offspring generated
-      n_offspring <- offspring_fun(1, susc)
+      n_offspring <- offspring_fun(1, susc, parent_mn_offspring)
       tdf$n_offspring[parent_idx] <- n_offspring
       tdf$offspring_generated[parent_idx] <- TRUE
       offspring_time_infection <- parent_time_infection + generation_time_dist(n_offspring)
@@ -229,6 +237,12 @@ simulate_branching_process <- function(
         offspring_time_seroconvert[index_offspring_seroconvert] <- offspring_time_infection[index_offspring_seroconvert] + infection_to_seroconversion_dist(number_offspring_seroconvert)
         offspring_time_serorevert <- rep(NA, n_offspring)
         offspring_time_serorevert[index_offspring_seroconvert] <- offspring_time_seroconvert[index_offspring_seroconvert] + seroconversion_to_seroreversion_dist(number_offspring_seroconvert)
+
+        ## Evolution of transmissibility
+        mn_offspring_increase <- sample(c(0, 1), n_offspring, replace = TRUE, prob = prob_beneficial_mutation)
+        index_mn_offspring_increase <- which(mn_offspring_increase == 1)
+        number_mn_offspring_increase <- sum(mn_offspring_increase)
+
 
         ## Appending this information on the offspring to the table
         tdf[(current_max_id+1):(current_max_id+n_offspring), "infection_id"] <- c(current_max_id + seq_len(n_offspring))
