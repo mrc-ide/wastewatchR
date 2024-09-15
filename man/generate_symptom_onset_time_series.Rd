@@ -11,8 +11,10 @@ This function converts a branching process output into time-series of symptom on
 }
 \seealso{
 Other post-processing: 
-\code{\link{generate_hospitalisation_time_series}()},
+\code{\link{generate_healthcare_seeking_time_series}()},
 \code{\link{generate_infections_time_series}()},
-\code{\link{generate_number_shedding_time_series}()}
+\code{\link{generate_number_shedding_time_series}()},
+\code{\link{generate_outbreak_size}()},
+\code{\link{generate_seropositivity_timeseries}()}
 }
 \concept{post-processing}

@@ -5,8 +5,8 @@
 \title{Generate a stochastic realisation from a stochastic branching process}
 \usage{
 simulate_branching_process(
-  mn_offspring = 3,
-  disp_offspring = 1.1,
+  initial_mn_offspring = 0.9,
+  disp_offspring = 0.9,
   generation_time_dist = function(n) {
      rgamma(n, shape = 12, rate = 2)
  },
@@ -14,20 +14,38 @@ simulate_branching_process(
   infection_to_onset_dist = function(n) {
      rgamma(n, shape = 6, rate = 2)
  },
-  prob_hosp = 0.35,
-  prob_seek_healthcare = 0.9,
-  hospitalisation_delay_dist = function(n) {
-     rgamma(n, shape = 24, rate = 2)
+  prob_severe = 0.35,
+  prob_seek_healthcare_non_severe = 0.9,
+  prob_seek_healthcare_severe = 0.9,
+  onset_to_healthcare_dist = function(n) {
+     rgamma(n, shape = 6, rate = 2)
  },
-  hospitalisation_duration_dist = function(n) {
-     rgamma(n, shape = 12, rate = 2)
+  prob_seroconvert_asymptomatic = 0.8,
+  prob_seroconvert_severe = 0.8,
+  prob_seroconvert_non_severe = 0.8,
+  infection_to_seroconversion_dist = function(n) {
+     rgamma(n, shape = 56, rate = 2)
+
+    },
+  seroconversion_to_seroreversion_dist = function(n) {
+     rgamma(n, shape = 730, rate =
+    2)
  },
-  initial_immune = 0,
-  seeding_cases = 10,
+  prob_beneficial_mutation = 0.75,
+  beneficial_mutation_effect_dist = function(n) {
+     rexp(n, rate = 10)
+ },
+  max_mn_offspring = 4,
+  annual_spillover_rate = 2,
+  spillover_seeding_cases_dist = function() {
+     rpois(1, lambda = 5)
+ },
   t0 = 0,
   tf = Inf,
   population = 1e+05,
-  check_final_size = 10000
+  initial_immune = 0,
+  check_final_size = 10000,
+  max_num_outbreaks = 10
 )
 }
 \description{

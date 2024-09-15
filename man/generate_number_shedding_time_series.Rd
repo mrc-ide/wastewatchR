@@ -16,8 +16,10 @@ weighted by the shedding distribution.
 }
 \seealso{
 Other post-processing: 
-\code{\link{generate_hospitalisation_time_series}()},
+\code{\link{generate_healthcare_seeking_time_series}()},
 \code{\link{generate_infections_time_series}()},
+\code{\link{generate_outbreak_size}()},
+\code{\link{generate_seropositivity_timeseries}()},
 \code{\link{generate_symptom_onset_time_series}()}
 }
 \concept{post-processing}
