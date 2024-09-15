@@ -37,9 +37,7 @@ simulate_branching_process <- function(
     population = 100000,
     initial_immune = 0,
     check_final_size = 10000,
-    max_num_outbreaks = 10,
-
-) {
+    max_num_outbreaks = 10) {
 
   ## Setting up the Offspring Distribution
   if (disp_offspring <= 1.0) {
