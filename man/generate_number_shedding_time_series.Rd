@@ -10,6 +10,13 @@ generate_number_shedding_time_series(
   population
 )
 }
+\arguments{
+\item{branching_process_output}{Output from simulate_branching_process}
+
+\item{shedding_dist}{The distribution of amount shed over time following infection.}
+
+\item{population}{The population size used in the simulate_branching_process output}
+}
 \description{
 This function converts a branching process output into time-series of number shedding,
 weighted by the shedding distribution.

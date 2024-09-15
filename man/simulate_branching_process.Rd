@@ -45,8 +45,62 @@ simulate_branching_process(
   population = 1e+05,
   initial_immune = 0,
   check_final_size = 10000,
-  max_num_outbreaks = 10
+  max_num_outbreaks = 10,
+  seed = 98
 )
+}
+\arguments{
+\item{initial_mn_offspring}{The initial value for the mean of the offspring distribution (inital as it can be modified by evolutionary forces, if these are switched on)}
+
+\item{disp_offspring}{The overdisperion of the offspring distribution. Must be >= 1. When set to 1, equivalent to a Poisson distribution; >1 is a Negative Binomial distribution.}
+
+\item{generation_time_dist}{The generation time distribution}
+
+\item{prob_symptomatic}{The probability that an infection develops symptoms}
+
+\item{infection_to_onset_dist}{The infection to symptom onset distribution}
+
+\item{prob_severe}{The probability that an infection develops severe disease. Note this is NOT conditional on being symptomatic (this conditional probability is calculated internally within the model)}
+
+\item{prob_seek_healthcare_non_severe}{The probability that a non-severe infection seeks healthcare and is tested and diagnosed successfully.}
+
+\item{prob_seek_healthcare_severe}{The probability that a severe infection seeks healthcare and is tested and diagnosed successfully.}
+
+\item{onset_to_healthcare_dist}{The sympmtom onset to seeking healthcare delay distribution.}
+
+\item{prob_seroconvert_asymptomatic}{The probability that an asymptomatic infection seroconverts.}
+
+\item{prob_seroconvert_severe}{The probability that an infection with severe disease seroconverts.}
+
+\item{prob_seroconvert_non_severe}{The probability that an infection with non-severe disease seroconverts.}
+
+\item{infection_to_seroconversion_dist}{The infection to seroconversion delay distribution.}
+
+\item{seroconversion_to_seroreversion_dist}{The seroconversion to seroreversion delay distribution.}
+
+\item{prob_beneficial_mutation}{The probability that any given infection acquires a mutation that modifies the mean of their offspring distribution (i.e. increases transmissibility).}
+
+\item{beneficial_mutation_effect_dist}{The distribution of effect sizes for each beneficial mutation (i.e. how much they increase transmissibility by).}
+
+\item{max_mn_offspring}{An upper cap on how high the mean of the offspring distribution can be.}
+
+\item{annual_spillover_rate}{Rate of zoonotic spillover per year}
+
+\item{spillover_seeding_cases_dist}{The distribution of initial seeding cases associated with each zoonotic spillover.}
+
+\item{t0}{The time to start the simulation from.}
+
+\item{tf}{The time to finish the simulation at. Not functionally used much as usually we hit check_final_size or max_num_outbreaks first.}
+
+\item{population}{Size of the overall population.}
+
+\item{initial_immune}{The number of individuals initially immune.}
+
+\item{check_final_size}{The maximum number of infected individuals that will be simulated.}
+
+\item{max_num_outbreaks}{The maximum number of distinct outbreaks that will be simulated.}
+
+\item{seed}{The stochastic seed used in the simulation.}
 }
 \description{
 This function creates a named list containing the output of simulating a stochastic branching

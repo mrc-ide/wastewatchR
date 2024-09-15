@@ -2,6 +2,33 @@
 #'
 #' This function creates a named list containing the output of simulating a stochastic branching
 #' process.
+#' @param initial_mn_offspring The initial value for the mean of the offspring distribution (inital as it can be modified by evolutionary forces, if these are switched on)
+#' @param disp_offspring The overdisperion of the offspring distribution. Must be >= 1. When set to 1, equivalent to a Poisson distribution; >1 is a Negative Binomial distribution.
+#' @param generation_time_dist The generation time distribution
+#' @param prob_symptomatic The probability that an infection develops symptoms
+#' @param infection_to_onset_dist The infection to symptom onset distribution
+#' @param prob_severe The probability that an infection develops severe disease. Note this is NOT conditional on being symptomatic (this conditional probability is calculated internally within the model)
+#' @param prob_seek_healthcare_non_severe The probability that a non-severe infection seeks healthcare and is tested and diagnosed successfully.
+#' @param prob_seek_healthcare_severe The probability that a severe infection seeks healthcare and is tested and diagnosed successfully.
+#' @param onset_to_healthcare_dist The sympmtom onset to seeking healthcare delay distribution.
+#' @param prob_seroconvert_asymptomatic The probability that an asymptomatic infection seroconverts.
+#' @param prob_seroconvert_severe The probability that an infection with severe disease seroconverts.
+#' @param prob_seroconvert_non_severe The probability that an infection with non-severe disease seroconverts.
+#' @param infection_to_seroconversion_dist The infection to seroconversion delay distribution.
+#' @param seroconversion_to_seroreversion_dist The seroconversion to seroreversion delay distribution.
+#' @param prob_beneficial_mutation The probability that any given infection acquires a mutation that modifies the mean of their offspring distribution (i.e. increases transmissibility).
+#' @param beneficial_mutation_effect_dist The distribution of effect sizes for each beneficial mutation (i.e. how much they increase transmissibility by).
+#' @param max_mn_offspring An upper cap on how high the mean of the offspring distribution can be.
+#' @param annual_spillover_rate Rate of zoonotic spillover per year
+#' @param spillover_seeding_cases_dist The distribution of initial seeding cases associated with each zoonotic spillover.
+#' @param t0 The time to start the simulation from.
+#' @param tf The time to finish the simulation at. Not functionally used much as usually we hit check_final_size or max_num_outbreaks first.
+#' @param population Size of the overall population.
+#' @param initial_immune The number of individuals initially immune.
+#' @param check_final_size The maximum number of infected individuals that will be simulated.
+#' @param max_num_outbreaks The maximum number of distinct outbreaks that will be simulated.
+#' @param seed The stochastic seed used in the simulation.
+#'
 #'
 #' @family simulation
 #' @export
@@ -286,7 +313,11 @@ simulate_branching_process <- function(
 }
 
 #' Utility function to calculate shedding given infection time-series and shedding distribution
-
+#'
+#' @param day The day being considered
+#' @param infection_counts A time series of the number of individuals infected on each day
+#' @param shedding_dist The distribution of amount shed over time following infection.
+#'
 #' @family utils
 #' @export
 calculate_shedding <- function(day, infection_counts, shedding_dist) {
@@ -305,6 +336,9 @@ calculate_shedding <- function(day, infection_counts, shedding_dist) {
 
 
 #' Convert stochastic realisation of branching process into number of new infections time-series
+#'
+#' @param branching_process_output Output from simulate_branching_process
+#' @param population The population size used in the simulate_branching_process output
 #'
 #' @family post-processing
 #' @export
@@ -325,6 +359,9 @@ generate_infections_time_series <- function(branching_process_output, population
 }
 
 #' Convert stochastic realisation of branching process into number of new infections time-series
+#'
+#' @param branching_process_output Output from simulate_branching_process
+#' @param population The population size used in the simulate_branching_process output
 #'
 #' @family post-processing
 #' @export
@@ -394,6 +431,10 @@ generate_outbreak_size <- function(branching_process_output, population) {
 #' This function converts a branching process output into time-series of number shedding,
 #' weighted by the shedding distribution.
 #'
+#' @param branching_process_output Output from simulate_branching_process
+#' @param shedding_dist The distribution of amount shed over time following infection.
+#' @param population The population size used in the simulate_branching_process output
+#'
 #' @family post-processing
 #' @export
 generate_number_shedding_time_series <- function(branching_process_output, shedding_dist, population) {
@@ -412,8 +453,9 @@ generate_number_shedding_time_series <- function(branching_process_output, shedd
 }
 
 #' Convert stochastic realisation of branching process into symptom onset time-series
-#'
 #' This function converts a branching process output into time-series of symptom onsets
+#' @param branching_process_output Output from simulate_branching_process
+#' @param population The population size used in the simulate_branching_process output
 #'
 #' @family post-processing
 #' @import dplyr
@@ -440,11 +482,15 @@ generate_symptom_onset_time_series <- function(branching_process_output, populat
 #' This function converts a branching process output into time-series of hospitalisations
 #' and hospital occupancy.
 #'
+#' @param branching_process_output Output from simulate_branching_process
+#' @param population The population size used in the simulate_branching_process output
+#'
+#'
 #' @family post-processing
 #' @export
 generate_healthcare_seeking_time_series <- function(branching_process_output, population) {
 
-  ## Calculating daily incidence of hospitalisations
+  ## Calculating daily incidence of healthcare seeking infections
   healthcare_seeking_incidence <- branching_process_output |>
     filter(seek_healthcare == 1) |>
     mutate(time_seek_healthcare_floor = floor(time_seek_healthcare)) |>
@@ -455,19 +501,6 @@ generate_healthcare_seeking_time_series <- function(branching_process_output, po
     rename(day = time_seek_healthcare_floor) %>%
     mutate(incidence_seek_healthcare_per_thousand = 1000 * incidence_seek_healthcare / population)
 
-  ## OLD Calculating number of individuals in hospital on any given day
-  # max_day <- ceiling(max(branching_process_output$time_leave_hospital, na.rm = TRUE))
-  # days <- seq(0, max_day, by = 1)
-  # hospital_occupancy <- sapply(days, function(t) {
-  #   sum(branching_process_output$time_hospitalised < t & branching_process_output$time_leave_hospital > t, na.rm = TRUE)
-  # })
-  # hospital_occupancy <- data.frame(day = days, hospitalised = hospital_occupancy)
-  ## Merging dataframes together
-  # overall_hospital_df <- hospitalisation_incidence |>
-  #   left_join(hospital_occupancy, by = "day") |>
-  #   mutate(incidence_hospitalisation_per_thousand = 1000 * incidence_hospitalisation / population,
-  #          hospitalised_per_thousand = 1000 * hospitalised / population)
-
   return(healthcare_seeking_incidence)
 }
 
@@ -475,6 +508,9 @@ generate_healthcare_seeking_time_series <- function(branching_process_output, po
 #'
 #' This function converts a branching process output into time-series of hospitalisations
 #' and hospital occupancy.
+#'
+#' @param branching_process_output Output from simulate_branching_process
+#' @param population The population size used in the simulate_branching_process output
 #'
 #' @family post-processing
 #' @export

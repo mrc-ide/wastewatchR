@@ -2,11 +2,18 @@
 % Please edit documentation in R/simulate_branching_process.R
 \name{generate_symptom_onset_time_series}
 \alias{generate_symptom_onset_time_series}
-\title{Convert stochastic realisation of branching process into symptom onset time-series}
+\title{Convert stochastic realisation of branching process into symptom onset time-series
+This function converts a branching process output into time-series of symptom onsets}
 \usage{
 generate_symptom_onset_time_series(branching_process_output, population)
 }
+\arguments{
+\item{branching_process_output}{Output from simulate_branching_process}
+
+\item{population}{The population size used in the simulate_branching_process output}
+}
 \description{
+Convert stochastic realisation of branching process into symptom onset time-series
 This function converts a branching process output into time-series of symptom onsets
 }
 \seealso{

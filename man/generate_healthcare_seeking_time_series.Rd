@@ -6,6 +6,11 @@
 \usage{
 generate_healthcare_seeking_time_series(branching_process_output, population)
 }
+\arguments{
+\item{branching_process_output}{Output from simulate_branching_process}
+
+\item{population}{The population size used in the simulate_branching_process output}
+}
 \description{
 This function converts a branching process output into time-series of hospitalisations
 and hospital occupancy.

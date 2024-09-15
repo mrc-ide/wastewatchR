@@ -6,6 +6,13 @@
 \usage{
 calculate_shedding(day, infection_counts, shedding_dist)
 }
+\arguments{
+\item{day}{The day being considered}
+
+\item{infection_counts}{A time series of the number of individuals infected on each day}
+
+\item{shedding_dist}{The distribution of amount shed over time following infection.}
+}
 \description{
 Utility function to calculate shedding given infection time-series and shedding distribution
 }
