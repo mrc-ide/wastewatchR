@@ -8,7 +8,7 @@
 simulate_branching_process <- function(
 
     ## Offspring distribution parameters
-    initial_mn_offspring = 3,
+    initial_mn_offspring = 0.9,
     disp_offspring = 0.9,
 
     ## Natural history parameters
@@ -30,9 +30,9 @@ simulate_branching_process <- function(
     seroconversion_to_seroreversion_dist = function(n) { rgamma(n, shape = 730, rate = 2) }, ## poss need to reverse rate and shape - TBD
 
     ## Evolution related parameters
-    prob_beneficial_mutation = 0.01,
-    beneficial_mutation_effect_dist = function(n) {rexp(n, rate = 20)}
-    max_mn_offspring = 4
+    prob_beneficial_mutation = 0.75,
+    beneficial_mutation_effect_dist = function(n) {rexp(n, rate = 10) },
+    max_mn_offspring = 4,
 
     ## Simulation parameters
     annual_spillover_rate = 2,
@@ -74,6 +74,8 @@ simulate_branching_process <- function(
     time_seroreversion = numeric(check_final_size),
     n_offspring = integer(check_final_size),
     outbreak = integer(check_final_size),
+    mutated = integer(check_final_size),
+    effect_size = numeric(check_final_size),
     infection_mn_offspring = numeric(check_final_size),
     seeding = NA_character_,
     offspring_generated = FALSE,
@@ -161,6 +163,8 @@ simulate_branching_process <- function(
       time_seroreversion = seeding_case_time_serorevert,
       n_offspring = NA_integer_,
       outbreak = outbreak_index,
+      mutated = 0,
+      effect_size = 0,
       infection_mn_offspring = initial_mn_offspring,
       seeding = "seeding",
       offspring_generated = FALSE,
@@ -239,10 +243,12 @@ simulate_branching_process <- function(
         offspring_time_serorevert[index_offspring_seroconvert] <- offspring_time_seroconvert[index_offspring_seroconvert] + seroconversion_to_seroreversion_dist(number_offspring_seroconvert)
 
         ## Evolution of transmissibility
-        mn_offspring_increase <- sample(c(0, 1), n_offspring, replace = TRUE, prob = prob_beneficial_mutation)
+        mn_offspring_increase <- sample(c(0, 1), n_offspring, replace = TRUE, prob = c(1 - prob_beneficial_mutation, prob_beneficial_mutation))
         index_mn_offspring_increase <- which(mn_offspring_increase == 1)
         number_mn_offspring_increase <- sum(mn_offspring_increase)
-
+        mn_offspring_increase_effect_size <- rep(0, n_offspring)
+        mn_offspring_increase_effect_size[index_mn_offspring_increase] <- beneficial_mutation_effect_dist(number_mn_offspring_increase)
+        mn_offspring_increase_effect_size[mn_offspring_increase >= max_mn_offspring] <- max_mn_offspring
 
         ## Appending this information on the offspring to the table
         tdf[(current_max_id+1):(current_max_id+n_offspring), "infection_id"] <- c(current_max_id + seq_len(n_offspring))
@@ -260,6 +266,9 @@ simulate_branching_process <- function(
         tdf[(current_max_id+1):(current_max_id+n_offspring), "outbreak"] <- parent_outbreak
         tdf[(current_max_id+1):(current_max_id+n_offspring), "n_offspring"] <- NA
         tdf[(current_max_id+1):(current_max_id+n_offspring), "outbreak"] <- outbreak_index
+        tdf[(current_max_id+1):(current_max_id+n_offspring), "mutated"] <- mn_offspring_increase
+        tdf[(current_max_id+1):(current_max_id+n_offspring), "effect_size"] <- mn_offspring_increase_effect_size
+        tdf[(current_max_id+1):(current_max_id+n_offspring), "infection_mn_offspring"] <- parent_mn_offspring + mn_offspring_increase_effect_size
         tdf[(current_max_id+1):(current_max_id+n_offspring), "seeding"] <- "onwards_infections"
         tdf[(current_max_id+1):(current_max_id+n_offspring), "offspring_generated"] <- FALSE
       }
