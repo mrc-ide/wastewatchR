@@ -17,10 +17,10 @@ simulate_branching_process <- function(
     ## Disease severity parameters
     prob_symptomatic = 0.8,
     infection_to_onset_dist = function(n) { rgamma(n, shape = 6, rate = 2) },
-    prob_severe = 0.35,
-    prob_seek_healthcare_non_severe = 0.9,
-    prob_seek_healthcare_severe = 0.9,
-    onset_to_healthcare_dist = function(n) { rgamma(n, shape = 6, rate = 2) },
+    prob_hosp = 0.35,
+    prob_seek_healthcare = 0.9,
+    hospitalisation_delay_dist = function(n) { rgamma(n, shape = 24, rate = 2) },
+    hospitalisation_duration_dist = function(n) { rgamma(n, shape = 12, rate = 2) },
 
     ## Simulation parameters
     initial_immune = 0,
@@ -54,9 +54,9 @@ simulate_branching_process <- function(
     time_infection = NA_real_,
     symptomatic = integer(check_final_size),
     time_symptom_onset = numeric(check_final_size),
-    severe = integer(check_final_size),
-    seek_healthcare = integer(check_final_size),
-    time_seek_healthcare = numeric(check_final_size),
+    hospitalised = integer(check_final_size),
+    time_hospitalised = numeric(check_final_size),
+    time_leave_hospital = numeric(check_final_size),
     n_offspring = integer(check_final_size),
     offspring_generated = FALSE,
     stringsAsFactors = FALSE
@@ -67,35 +67,27 @@ simulate_branching_process <- function(
 
   ## Generating symptom status of seeding cases
   seeding_cases_symptomatic <- sample(c(0, 1), seeding_cases, replace = TRUE,               ## Determining whether seeding cases are symptomatic
-                                      prob = c(1 - prob_symptomatic, prob_symptomatic))
+                                      prob = c(1-prob_symptomatic, prob_symptomatic))
   number_seeding_cases_symptomatic <- sum(seeding_cases_symptomatic)                        ## Calculating number of symptomatic index cases
   index_seeding_cases_symptomatic <- which(seeding_cases_symptomatic == 1)                  ## Which seeding cases are symptomatic
-  index_seeding_cases_asymptomatic <- which(seeding_cases_symptomatic == 0)                  ## Which seeding cases are symptomatic
   seeding_cases_time_symptom_onset <- rep(NA, seeding_cases)
   seeding_cases_time_symptom_onset[index_seeding_cases_symptomatic] <- seeding_cases_time_infection[index_seeding_cases_symptomatic] + infection_to_onset_dist(number_seeding_cases_symptomatic)
 
-  ## Generating disease severity status of seeding cases
-  prob_severe_if_symptomatic <- prob_severe / prob_symptomatic  ## Probability of having severe disease conditional on being symptomatic
-  if (prob_severe_if_symptomatic >= 1) {
-    stop("prob_severe / prob_symptomatic must be <= 1")
+  ## Generating hospitalised status of seeding cases
+  prob_hosp_if_symptomatic <- prob_hosp / prob_symptomatic  ## Probability of being hospitalised conditional on being symptomatic
+  if (prob_hosp_if_symptomatic >= 1) {
+    stop("prob_hosp / prob_symptomatic must be <= 1")
   }
-  seeding_cases_severe <- rep(0, seeding_cases)
-  seeding_cases_severe[index_seeding_cases_symptomatic] <- sample(c(0, 1), number_seeding_cases_symptomatic, replace = TRUE,                  ## Determining whether symptomatic seeding cases have severe disease
-                                                                        prob = c(1 - prob_severe_if_symptomatic, prob_severe_if_symptomatic))
-  number_seeding_cases_severe <- sum(seeding_cases_severe)                        ## Calculating number of severe disease seeding cases
-  index_seeding_cases_severe <- which(seeding_cases_symptomatic == 1 & seeding_cases_severe == 1)                  ## Which seeding cases are severe disease
-  index_seeding_cases_not_severe <- which(seeding_cases_symptomatic == 1  & seeding_cases_severe != 1)
-
-  ## Generating time of seeking healthcare for each seeding case (stratified by diseas severity)
-  seeding_case_seek_healthcare <- rep(0, seeding_cases)
-  seeding_case_seek_healthcare[index_seeding_cases_not_severe] <- sample(c(0, 1), number_seeding_cases_symptomatic - number_seeding_cases_severe,
-                                                                         replace = TRUE, prob = c(1 - prob_seek_healthcare_non_severe, prob_seek_healthcare_non_severe))
-  seeding_case_seek_healthcare[index_seeding_cases_severe] <- sample(c(0, 1), number_seeding_cases_severe,
-                                                                     replace = TRUE, prob = c(1 - prob_seek_healthcare_severe, prob_seek_healthcare_severe))
-  number_seeding_cases_seek_healthcare <- sum(seeding_case_seek_healthcare)
-  index_seeding_case_seek_healthcare <- which(seeding_case_seek_healthcare == 1)
-  seeding_case_time_seek_healthcare <- rep(NA, seeding_cases)
-  seeding_case_time_seek_healthcare[index_seeding_case_seek_healthcare] <- seeding_cases_time_symptom_onset[index_seeding_case_seek_healthcare] + onset_to_healthcare_dist(number_seeding_cases_seek_healthcare)
+  seeding_cases_hospitalised <- rep(0, seeding_cases)
+  seeding_cases_hospitalised[index_seeding_cases_symptomatic] <- sample(c(0, 1), number_seeding_cases_symptomatic, replace = TRUE,               ## Determining whether seeding cases are symptomatic
+                                                                        prob = c(1-(prob_hosp_if_symptomatic * prob_seek_healthcare),
+                                                                                 (prob_hosp_if_symptomatic * prob_seek_healthcare)))
+  number_seeding_cases_hospitalised <- sum(seeding_cases_hospitalised)                        ## Calculating number of hospitalised index cases
+  index_seeding_cases_hospitalised <- which(seeding_cases_hospitalised == 1)                  ## Which seeding cases are hospitalised
+  seeding_cases_time_hospitalised <- rep(NA, seeding_cases)
+  seeding_cases_time_hospitalised[index_seeding_cases_hospitalised] <- seeding_cases_time_symptom_onset[index_seeding_cases_hospitalised] + hospitalisation_delay_dist(number_seeding_cases_hospitalised)
+  seeding_cases_time_leave_hospital <- rep(NA, seeding_cases)
+  seeding_cases_time_leave_hospital[index_seeding_cases_hospitalised] <- seeding_cases_time_hospitalised[index_seeding_cases_hospitalised] + hospitalisation_duration_dist(number_seeding_cases_hospitalised)
 
   ## Initialize the dataframe with the seeding cases
   tdf[1:seeding_cases, ] <- data.frame(
@@ -105,9 +97,9 @@ simulate_branching_process <- function(
     time_infection = seeding_cases_time_infection,
     symptomatic = seeding_cases_symptomatic,
     time_symptom_onset = seeding_cases_time_symptom_onset,
-    severe = seeding_cases_severe,
-    seek_healthcare = seeding_case_seek_healthcare,
-    time_seek_healthcare = seeding_case_time_seek_healthcare,
+    hospitalised = seeding_cases_hospitalised,
+    time_hospitalised = seeding_cases_time_hospitalised,
+    time_leave_hospital = seeding_cases_time_leave_hospital,
     n_offspring = NA_integer_,
     offspring_generated = FALSE,
     stringsAsFactors = FALSE
@@ -142,30 +134,23 @@ simulate_branching_process <- function(
     if (n_offspring > 0) {
 
       ## Symptom status
-      offspring_symptomatic <- sample(c(0, 1), n_offspring, replace = TRUE, prob = c(1 - prob_symptomatic, prob_symptomatic))
+      offspring_symptomatic <- sample(c(0, 1), n_offspring, replace = TRUE, prob = c(1-prob_symptomatic, prob_symptomatic))
       number_offspring_symptomatic <- sum(offspring_symptomatic)
       index_offspring_symptomatic <- which(offspring_symptomatic == 1)
       offspring_time_symptom_onset <- rep(NA, n_offspring)
       offspring_time_symptom_onset[index_offspring_symptomatic] <- offspring_time_infection[index_offspring_symptomatic] + infection_to_onset_dist(number_offspring_symptomatic)
 
-      ## Severe disease
-      offspring_severe <- rep(0, n_offspring)
-      offspring_severe[index_offspring_symptomatic] <- sample(c(0, 1), number_offspring_symptomatic, replace = TRUE,
-                                                              prob = c(1 - prob_severe_if_symptomatic, prob_severe_if_symptomatic))
-      number_offspring_severe <- sum(offspring_severe)
-      index_seeding_cases_severe <- which(offspring_symptomatic == 1 & offspring_severe == 1)                  ## Which offspring are severe disease
-      index_seeding_cases_not_severe <- which(offspring_symptomatic == 1  & offspring_severe != 1)
-
-      ## Seeking healthcare
-      offspring_seek_healthcare <- rep(0, n_offspring)
-      offspring_seek_healthcare[index_seeding_cases_not_severe] <- sample(c(0, 1), number_offspring_symptomatic - number_offspring_severe,
-                                                                          replace = TRUE, prob = c(1 - prob_seek_healthcare_non_severe, prob_seek_healthcare_non_severe))
-      offspring_seek_healthcare[index_seeding_cases_severe] <- sample(c(0, 1), number_offspring_severe,
-                                                                      replace = TRUE, prob = c(1 - prob_seek_healthcare_severe, prob_seek_healthcare_severe))
-      number_offspring_seek_healthcare <- sum(offspring_seek_healthcare)
-      index_offspring_seek_healthcare <- which(offspring_seek_healthcare == 1)
-      offspring_time_seek_healthcare <- rep(NA, n_offspring)
-      offspring_time_seek_healthcare[index_offspring_seek_healthcare] <- offspring_time_symptom_onset[index_offspring_seek_healthcare] + onset_to_healthcare_dist(number_offspring_seek_healthcare)
+      ## Hospitalisation status/timing
+      offspring_hospitalised <- rep(0, n_offspring)
+      offspring_hospitalised[index_offspring_symptomatic] <- sample(c(0, 1), number_offspring_symptomatic, replace = TRUE,
+                                                                    prob = c(1-(prob_hosp_if_symptomatic * prob_seek_healthcare),
+                                                                             (prob_hosp_if_symptomatic * prob_seek_healthcare)))
+      number_offspring_hospitalised <- sum(offspring_hospitalised)
+      index_offspring_hospitalised <- which(offspring_hospitalised == 1)
+      offspring_time_hospitalised <- rep(NA, n_offspring)
+      offspring_time_hospitalised[index_offspring_hospitalised] <- offspring_time_symptom_onset[index_offspring_hospitalised] + hospitalisation_delay_dist(number_offspring_hospitalised)
+      offspring_time_leave_hospital <- rep(NA, n_offspring)
+      offspring_time_leave_hospital[index_offspring_hospitalised] <- offspring_time_hospitalised[index_offspring_hospitalised] + hospitalisation_duration_dist(number_offspring_hospitalised)
 
       ## Appending this information on the offspring to the table
       tdf[(current_max_id+1):(current_max_id+n_offspring), "infection_id"] <- c(current_max_id + seq_len(n_offspring))
@@ -174,9 +159,9 @@ simulate_branching_process <- function(
       tdf[(current_max_id+1):(current_max_id+n_offspring), "time_infection"] <- offspring_time_infection
       tdf[(current_max_id+1):(current_max_id+n_offspring), "symptomatic"] <- offspring_symptomatic
       tdf[(current_max_id+1):(current_max_id+n_offspring), "time_symptom_onset"] <- offspring_time_symptom_onset
-      tdf[(current_max_id+1):(current_max_id+n_offspring), "severe"] <- offspring_severe
-      tdf[(current_max_id+1):(current_max_id+n_offspring), "seek_healthcare"] <- offspring_seek_healthcare
-      tdf[(current_max_id+1):(current_max_id+n_offspring), "time_seek_healthcare"] <- offspring_time_seek_healthcare
+      tdf[(current_max_id+1):(current_max_id+n_offspring), "hospitalised"] <- offspring_hospitalised
+      tdf[(current_max_id+1):(current_max_id+n_offspring), "time_hospitalised"] <- offspring_time_hospitalised
+      tdf[(current_max_id+1):(current_max_id+n_offspring), "time_leave_hospital"] <- offspring_time_leave_hospital
       tdf[(current_max_id+1):(current_max_id+n_offspring), "n_offspring"] <- NA
       tdf[(current_max_id+1):(current_max_id+n_offspring), "offspring_generated"] <- FALSE
     }
@@ -279,31 +264,30 @@ generate_symptom_onset_time_series <- function(branching_process_output, populat
 #'
 #' @family post-processing
 #' @export
-generate_healthcare_seeking_time_series <- function(branching_process_output, population) {
+generate_hospitalisation_time_series <- function(branching_process_output, population) {
 
   ## Calculating daily incidence of hospitalisations
-  healthcare_seeking_incidence <- branching_process_output |>
-    filter(seek_healthcare == 1) |>
-    mutate(time_seek_healthcare_floor = floor(time_seek_healthcare)) |>
-    group_by(time_seek_healthcare_floor) |>
-    summarise(incidence_seek_healthcare = n()) |>
-    complete(time_seek_healthcare_floor = seq(0, max(time_seek_healthcare_floor, na.rm = TRUE), by = 1),
-             fill = list(incidence_seek_healthcare = 0)) |>
-    rename(day = time_seek_healthcare_floor) %>%
-    mutate(incidence_seek_healthcare_per_thousand = 1000 * incidence_seek_healthcare / population)
+  hospitalisation_incidence <- branching_process_output |>
+    filter(hospitalised == 1) |>
+    mutate(time_hospitalised_floor = floor(time_hospitalised)) |>
+    group_by(time_hospitalised_floor) |>
+    summarise(incidence_hospitalisation = n()) |>
+    complete(time_hospitalised_floor = seq(0, max(time_hospitalised_floor, na.rm = TRUE), by = 1),
+             fill = list(incidence_hospitalisation = 0)) |>
+    rename(day = time_hospitalised_floor)
 
-  ## OLD Calculating number of individuals in hospital on any given day
-  # max_day <- ceiling(max(branching_process_output$time_leave_hospital, na.rm = TRUE))
-  # days <- seq(0, max_day, by = 1)
-  # hospital_occupancy <- sapply(days, function(t) {
-  #   sum(branching_process_output$time_hospitalised < t & branching_process_output$time_leave_hospital > t, na.rm = TRUE)
-  # })
-  # hospital_occupancy <- data.frame(day = days, hospitalised = hospital_occupancy)
+  ## Calculating number of individuals in hospital on any given day
+  max_day <- ceiling(max(branching_process_output$time_leave_hospital, na.rm = TRUE))
+  days <- seq(0, max_day, by = 1)
+  hospital_occupancy <- sapply(days, function(t) {
+    sum(branching_process_output$time_hospitalised < t & branching_process_output$time_leave_hospital > t, na.rm = TRUE)
+  })
+  hospital_occupancy <- data.frame(day = days, hospitalised = hospital_occupancy)
+
   ## Merging dataframes together
-  # overall_hospital_df <- hospitalisation_incidence |>
-  #   left_join(hospital_occupancy, by = "day") |>
-  #   mutate(incidence_hospitalisation_per_thousand = 1000 * incidence_hospitalisation / population,
-  #          hospitalised_per_thousand = 1000 * hospitalised / population)
-
-  return(healthcare_seeking_incidence)
+  overall_hospital_df <- hospitalisation_incidence |>
+    left_join(hospital_occupancy, by = "day") |>
+    mutate(incidence_hospitalisation_per_thousand = 1000 * incidence_hospitalisation / population,
+           hospitalised_per_thousand = 1000 * hospitalised / population)
+  return(overall_hospital_df)
 }
