@@ -294,8 +294,7 @@ generate_infections_time_series <- function(branching_process_output, population
     complete(day = seq(0, max_day, by = 1),
              fill = list(new_infections = 0)) |>
     mutate(new_infections_per_thousand = 1000 * new_infections / population)
-  return(list(infection_counts = infection_counts,
-              outbreak_infections = outbreak_infections)
+  return(infection_counts)
 }
 
 #' Convert stochastic realisation of branching process into number of new infections time-series
@@ -309,19 +308,13 @@ generate_outbreak_size <- function(branching_process_output, population) {
 
   ## For infections
   infection_counts_per_outbreak_including_seeding <- branching_process_output |>
-    mutate(day = floor(time_infection)) |>
-    group_by(day, outbreak) |>
-    summarise(new_infections = n(), .groups = 'drop') %>%
-    ungroup() %>%
+    filter(outbreak != 0) %>%
     group_by(outbreak) %>%
     summarise(total_infection_size_with_seeding = n())
 
   infection_counts_per_outbreak_excluding_seeding <- branching_process_output |>
     filter(seeding != "seeding") %>%
-    mutate(day = floor(time_infection)) |>
-    group_by(day, outbreak) |>
-    summarise(new_infections = n(), .groups = 'drop') %>%
-    ungroup() %>%
+    filter(outbreak != 0) %>%
     group_by(outbreak) %>%
     summarise(total_infection_size_without_seeding = n())
 
@@ -330,21 +323,15 @@ generate_outbreak_size <- function(branching_process_output, population) {
 
   ## For symptom onsets
   symptom_onset_counts_per_outbreak_including_seeding <- branching_process_output |>
+    filter(outbreak != 0) %>%
     filter(symptomatic == 1) %>%
-    mutate(day = floor(time_symptom_onset)) |>
-    group_by(day, outbreak) |>
-    summarise(new_onsets = n(), .groups = 'drop') %>%
-    ungroup() %>%
     group_by(outbreak) %>%
     summarise(total_onset_size_with_seeding = n())
 
   symptom_onset_counts_per_outbreak_excluding_seeding <- branching_process_output |>
     filter(symptomatic == 1) %>%
+    filter(outbreak != 0) %>%
     filter(seeding != "seeding") %>%
-    mutate(day = floor(time_symptom_onset)) |>
-    group_by(day, outbreak) |>
-    summarise(new_onsets = n(), .groups = 'drop') %>%
-    ungroup() %>%
     group_by(outbreak) %>%
     summarise(total_onset_size_without_seeding = n())
 
@@ -354,20 +341,14 @@ generate_outbreak_size <- function(branching_process_output, population) {
   ## For healthcare seeking
   healthcare_counts_per_outbreak_including_seeding <- branching_process_output |>
     filter(seek_healthcare == 1) |>
-    mutate(day = floor(time_seek_healthcare)) |>
-    group_by(day, outbreak) |>
-    summarise(new_healthcare = n(), .groups = 'drop') %>%
-    ungroup() %>%
+    filter(outbreak != 0) %>%
     group_by(outbreak) %>%
     summarise(total_healthcare_seek_size_with_seeding = n())
 
   healthcare_counts_per_outbreak_excluding_seeding <- branching_process_output |>
     filter(seek_healthcare == 1) |>
     filter(seeding != "seeding") %>%
-    mutate(day = floor(time_seek_healthcare)) |>
-    group_by(day, outbreak) |>
-    summarise(new_healthcare = n(), .groups = 'drop') %>%
-    ungroup() %>%
+    filter(outbreak != 0) %>%
     group_by(outbreak) %>%
     summarise(total_healthcare_seek_size_without_seeding = n())
 
@@ -378,10 +359,7 @@ generate_outbreak_size <- function(branching_process_output, population) {
     left_join(onsets_overall_outbreak_size_df, by = "outbreak") %>%
     left_join(healthcare_seek_overall_outbreak_size_df, by = "outbreak")
 
-
-
-  return(list(infection_counts = infection_counts,
-              outbreak_infections = outbreak_infections)
+  return(overall_df)
 }
 
 #' Convert stochastic realisation of branching process into number shedding time-series
