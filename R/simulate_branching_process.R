@@ -22,6 +22,13 @@ simulate_branching_process <- function(
     prob_seek_healthcare_severe = 0.9,
     onset_to_healthcare_dist = function(n) { rgamma(n, shape = 6, rate = 2) },
 
+    ## Serology related parameters
+    prob_seroconvert_asymptomatic = 0.8,
+    prob_seroconvert_severe = 0.8,
+    prob_seroconvert_non_severe = 0.8,
+    infection_to_seroconversion_dist = function(n) { rgamma(n, shape = 56, rate = 2) },
+    seroconversion_to_seroreversion_dist = function(n) { rgamma(n, shape = 730, rate = 2) },
+
     ## Simulation parameters
     initial_immune = 0,
     seeding_cases = 10,
@@ -57,6 +64,9 @@ simulate_branching_process <- function(
     severe = integer(check_final_size),
     seek_healthcare = integer(check_final_size),
     time_seek_healthcare = numeric(check_final_size),
+    seroconvert = integer(check_final_size),
+    time_seroconversion = numeric(check_final_size),
+    time_seroreversion = numeric(check_final_size),
     n_offspring = integer(check_final_size),
     offspring_generated = FALSE,
     stringsAsFactors = FALSE
@@ -86,7 +96,7 @@ simulate_branching_process <- function(
   index_seeding_cases_severe <- which(seeding_cases_symptomatic == 1 & seeding_cases_severe == 1)                  ## Which seeding cases are severe disease
   index_seeding_cases_not_severe <- which(seeding_cases_symptomatic == 1  & seeding_cases_severe != 1)
 
-  ## Generating time of seeking healthcare for each seeding case (stratified by diseas severity)
+  ## Generating time of seeking healthcare for each seeding case (stratified by disease severity)
   seeding_case_seek_healthcare <- rep(0, seeding_cases)
   seeding_case_seek_healthcare[index_seeding_cases_not_severe] <- sample(c(0, 1), number_seeding_cases_symptomatic - number_seeding_cases_severe,
                                                                          replace = TRUE, prob = c(1 - prob_seek_healthcare_non_severe, prob_seek_healthcare_non_severe))
@@ -96,6 +106,21 @@ simulate_branching_process <- function(
   index_seeding_case_seek_healthcare <- which(seeding_case_seek_healthcare == 1)
   seeding_case_time_seek_healthcare <- rep(NA, seeding_cases)
   seeding_case_time_seek_healthcare[index_seeding_case_seek_healthcare] <- seeding_cases_time_symptom_onset[index_seeding_case_seek_healthcare] + onset_to_healthcare_dist(number_seeding_cases_seek_healthcare)
+
+  ## Generating time of seroconversion/seroreversion for each seeding case (stratified by disease severity)
+  seeding_case_seroconvert <- rep(0, seeding_cases)
+  seeding_case_seroconvert[index_seeding_cases_asymptomatic] <- sample(c(0, 1), seeding_cases - number_seeding_cases_symptomatic,
+                                                                       replace = TRUE, prob = c(1 - prob_seroconvert_asymptomatic, prob_seroconvert_asymptomatic))
+  seeding_case_seroconvert[index_seeding_cases_not_severe] <- sample(c(0, 1), number_seeding_cases_symptomatic - number_seeding_cases_severe,
+                                                                     replace = TRUE, prob = c(1 - prob_seroconvert_non_severe, prob_seroconvert_non_severe))
+  seeding_case_seroconvert[index_seeding_cases_severe] <- sample(c(0, 1), number_seeding_cases_severe,
+                                                                 replace = TRUE, prob = c(1 - prob_seroconvert_severe, prob_seroconvert_severe))
+  number_seeding_cases_seroconvert <- sum(seeding_case_seroconvert)
+  index_seeding_case_seroconvert <- which(seeding_case_seroconvert == 1)
+  seeding_case_time_seroconvert <- rep(NA, seeding_cases)
+  seeding_case_time_seroconvert[index_seeding_case_seroconvert] <- seeding_cases_time_infection[index_seeding_case_seroconvert] + infection_to_seroconversion_dist(number_seeding_cases_seroconvert)
+  seeding_case_time_serorevert <- rep(NA, seeding_cases)
+  seeding_case_time_serorevert[index_seeding_case_seroconvert] <- seeding_case_time_seroconvert[index_seeding_case_seroconvert] + seroconversion_to_seroreversion_dist(number_seeding_cases_seroconvert)
 
   ## Initialize the dataframe with the seeding cases
   tdf[1:seeding_cases, ] <- data.frame(
@@ -108,6 +133,9 @@ simulate_branching_process <- function(
     severe = seeding_cases_severe,
     seek_healthcare = seeding_case_seek_healthcare,
     time_seek_healthcare = seeding_case_time_seek_healthcare,
+    seroconvert = seeding_case_seroconvert,
+    time_seroconversion = seeding_case_time_seroconvert,
+    time_seroreversion = seeding_case_time_serorevert,
     n_offspring = NA_integer_,
     offspring_generated = FALSE,
     stringsAsFactors = FALSE
@@ -145,6 +173,7 @@ simulate_branching_process <- function(
       offspring_symptomatic <- sample(c(0, 1), n_offspring, replace = TRUE, prob = c(1 - prob_symptomatic, prob_symptomatic))
       number_offspring_symptomatic <- sum(offspring_symptomatic)
       index_offspring_symptomatic <- which(offspring_symptomatic == 1)
+      index_offspring_asymptomatic <- which(offspring_symptomatic == 0)
       offspring_time_symptom_onset <- rep(NA, n_offspring)
       offspring_time_symptom_onset[index_offspring_symptomatic] <- offspring_time_infection[index_offspring_symptomatic] + infection_to_onset_dist(number_offspring_symptomatic)
 
@@ -153,19 +182,34 @@ simulate_branching_process <- function(
       offspring_severe[index_offspring_symptomatic] <- sample(c(0, 1), number_offspring_symptomatic, replace = TRUE,
                                                               prob = c(1 - prob_severe_if_symptomatic, prob_severe_if_symptomatic))
       number_offspring_severe <- sum(offspring_severe)
-      index_seeding_cases_severe <- which(offspring_symptomatic == 1 & offspring_severe == 1)                  ## Which offspring are severe disease
-      index_seeding_cases_not_severe <- which(offspring_symptomatic == 1  & offspring_severe != 1)
+      index_offspring_severe <- which(offspring_symptomatic == 1 & offspring_severe == 1)                  ## Which offspring are severe disease
+      index_offspring_not_severe <- which(offspring_symptomatic == 1  & offspring_severe != 1)
 
       ## Seeking healthcare
       offspring_seek_healthcare <- rep(0, n_offspring)
-      offspring_seek_healthcare[index_seeding_cases_not_severe] <- sample(c(0, 1), number_offspring_symptomatic - number_offspring_severe,
-                                                                          replace = TRUE, prob = c(1 - prob_seek_healthcare_non_severe, prob_seek_healthcare_non_severe))
-      offspring_seek_healthcare[index_seeding_cases_severe] <- sample(c(0, 1), number_offspring_severe,
-                                                                      replace = TRUE, prob = c(1 - prob_seek_healthcare_severe, prob_seek_healthcare_severe))
+      offspring_seek_healthcare[index_offspring_not_severe] <- sample(c(0, 1), number_offspring_symptomatic - number_offspring_severe,
+                                                                      replace = TRUE, prob = c(1 - prob_seek_healthcare_non_severe, prob_seek_healthcare_non_severe))
+      offspring_seek_healthcare[index_offspring_severe] <- sample(c(0, 1), number_offspring_severe,
+                                                                  replace = TRUE, prob = c(1 - prob_seek_healthcare_severe, prob_seek_healthcare_severe))
       number_offspring_seek_healthcare <- sum(offspring_seek_healthcare)
       index_offspring_seek_healthcare <- which(offspring_seek_healthcare == 1)
       offspring_time_seek_healthcare <- rep(NA, n_offspring)
       offspring_time_seek_healthcare[index_offspring_seek_healthcare] <- offspring_time_symptom_onset[index_offspring_seek_healthcare] + onset_to_healthcare_dist(number_offspring_seek_healthcare)
+
+      ## Time of seroconversion/seroreversion for offspring (stratified by disease severity)
+      offspring_seroconvert <- rep(0, n_offspring)
+      offspring_seroconvert[index_offspring_asymptomatic] <- sample(c(0, 1), n_offspring - number_offspring_symptomatic,
+                                                                    replace = TRUE, prob = c(1 - prob_seroconvert_asymptomatic, prob_seroconvert_asymptomatic))
+      offspring_seroconvert[index_offspring_not_severe] <- sample(c(0, 1), number_offspring_symptomatic - number_offspring_severe,
+                                                                  replace = TRUE, prob = c(1 - prob_seroconvert_non_severe, prob_seroconvert_non_severe))
+      offspring_seroconvert[index_offspring_severe] <- sample(c(0, 1), number_offspring_severe,
+                                                              replace = TRUE, prob = c(1 - prob_seroconvert_severe, prob_seroconvert_severe))
+      number_offspring_seroconvert <- sum(offspring_seroconvert)
+      index_offspring_seroconvert <- which(offspring_seroconvert == 1)
+      offspring_time_seroconvert <- rep(NA, n_offspring)
+      offspring_time_seroconvert[index_offspring_seroconvert] <- offspring_time_infection[index_offspring_seroconvert] + infection_to_seroconversion_dist(number_offspring_seroconvert)
+      offspring_time_serorevert <- rep(NA, n_offspring)
+      offspring_time_serorevert[index_offspring_seroconvert] <- offspring_time_seroconvert[index_offspring_seroconvert] + seroconversion_to_seroreversion_dist(number_offspring_seroconvert)
 
       ## Appending this information on the offspring to the table
       tdf[(current_max_id+1):(current_max_id+n_offspring), "infection_id"] <- c(current_max_id + seq_len(n_offspring))
@@ -177,6 +221,9 @@ simulate_branching_process <- function(
       tdf[(current_max_id+1):(current_max_id+n_offspring), "severe"] <- offspring_severe
       tdf[(current_max_id+1):(current_max_id+n_offspring), "seek_healthcare"] <- offspring_seek_healthcare
       tdf[(current_max_id+1):(current_max_id+n_offspring), "time_seek_healthcare"] <- offspring_time_seek_healthcare
+      tdf[(current_max_id+1):(current_max_id+n_offspring), "seroconvert"] <- offspring_seroconvert
+      tdf[(current_max_id+1):(current_max_id+n_offspring), "time_seroconversion"] <- offspring_time_seroconvert
+      tdf[(current_max_id+1):(current_max_id+n_offspring), "time_seroreversion"] <- offspring_time_serorevert
       tdf[(current_max_id+1):(current_max_id+n_offspring), "n_offspring"] <- NA
       tdf[(current_max_id+1):(current_max_id+n_offspring), "offspring_generated"] <- FALSE
     }
@@ -306,4 +353,46 @@ generate_healthcare_seeking_time_series <- function(branching_process_output, po
   #          hospitalised_per_thousand = 1000 * hospitalised / population)
 
   return(healthcare_seeking_incidence)
+}
+
+#' Convert stochastic realisation of branching process into hospitalisation time-series
+#'
+#' This function converts a branching process output into time-series of hospitalisations
+#' and hospital occupancy.
+#'
+#' @family post-processing
+#' @export
+generate_seropositivity_timeseries <- function(branching_process_output, population) {
+
+  ## Calculating daily incidence of hospitalisations
+  seroconversion_df <- branching_process_output |>
+    filter(seroconvert == 1) %>%
+    mutate(time_seroconversion_floor = floor(time_seroconversion)) |>
+    group_by(time_seroconversion_floor) %>%
+    summarise(n_seroconverted = n()) %>%
+    complete(time_seroconversion_floor = seq(0, max(time_seroconversion_floor, na.rm = TRUE), by = 1),
+             fill = list(n_seroconverted = 0)) |>
+    mutate(cumulative_seroconversions = cumsum(n_seroconverted))
+
+  seroreversion_df <- branching_process_output |>
+    filter(seroconvert == 1) %>%
+    mutate(time_seroreversion_floor = floor(time_seroreversion)) |>
+    group_by(time_seroreversion_floor) %>%
+    summarise(n_seroreverted = n()) %>%
+    complete(time_seroreversion_floor = seq(0, max(time_seroreversion_floor, na.rm = TRUE), by = 1),
+             fill = list(n_seroreverted = 0)) |>
+    mutate(cumulative_seroreversions = cumsum(n_seroreverted))
+
+  max_seroconversion_value <- max(seroconversion_df$cumulative_seroconversions)
+  sero_df <- seroconversion_df %>%
+    full_join(seroreversion_df, by = c("time_seroconversion_floor" = "time_seroreversion_floor")) %>%
+    rename(time = time_seroconversion_floor) %>%
+    complete(time = seq(0, max(time, na.rm = TRUE), by = 1),
+             fill = list(n_seroconverted = 0)) %>%
+    complete(time = seq(0, max(time, na.rm = TRUE), by = 1),
+             fill = list(cumulative_seroconversions = max_seroconversion_value)) %>%
+    mutate(seropositive_abs = cumulative_seroconversions - cumulative_seroreversions) %>% ## NOTE - CHECK THIS IS CORRECT!!
+    mutate(seropositive_prop_pop = seropositive_abs / population)
+
+  return(sero_df)
 }
