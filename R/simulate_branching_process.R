@@ -141,8 +141,9 @@ simulate_branching_process <- function(
     seeding_case_time_serorevert[index_seeding_case_seroconvert] <- seeding_case_time_seroconvert[index_seeding_case_seroconvert] + seroconversion_to_seroreversion_dist(number_seeding_cases_seroconvert)
 
     ## Initialize the dataframe with the seeding cases
+    current_max_id <- max(tdf$infection_id)
     tdf[tdf_start_index:(tdf_start_index + seeding_cases - 1), ] <- data.frame(
-      infection_id = seq_len(seeding_cases),
+      infection_id = (current_max_id + 1):(current_max_id + seeding_cases),
       infection_ancestor = NA_integer_,
       infection_generation = 1L,
       time_infection = seeding_cases_time_infection,
