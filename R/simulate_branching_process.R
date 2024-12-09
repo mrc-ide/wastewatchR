@@ -368,6 +368,13 @@ generate_outbreak_size <- function(branching_process_output, population) {
   max_day <- ceiling(max(branching_process_output$time_infection, na.rm = TRUE))
   days <- seq(0, max_day, by = 1)
 
+  ## Calculate outbreak time
+  outbreak_times <- branching_process_output |>
+    filter(outbreak != 0) %>%
+    group_by(outbreak) %>%
+    summarise(outbreak_start = min(time_infection, na.rm = TRUE),
+              outbreak_end = max(c(time_infection, time_symptom_onset, time_seek_healthcare), na.rm = TRUE))
+
   ## For infections
   infection_counts_per_outbreak_including_seeding <- branching_process_output |>
     filter(outbreak != 0) %>%
@@ -419,7 +426,8 @@ generate_outbreak_size <- function(branching_process_output, population) {
 
   overall_df <- infection_overall_outbreak_size_df %>%
     left_join(onsets_overall_outbreak_size_df, by = "outbreak") %>%
-    left_join(healthcare_seek_overall_outbreak_size_df, by = "outbreak")
+    left_join(healthcare_seek_overall_outbreak_size_df, by = "outbreak") %>%
+    left_join(outbreak_times, by = "outbreak")
 
   return(overall_df)
 }
