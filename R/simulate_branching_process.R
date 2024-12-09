@@ -115,7 +115,7 @@ simulate_branching_process <- function(
   susc <- population - initial_immune - 1L ## do we need to be account for seroreversion/waning immunity for this - possibly...
   outbreak_index <- 1
 
-  while (outbreak_index <= max_num_outbreaks & nrow(tdf) <= check_final_size) {
+  while (outbreak_index <= max_num_outbreaks & nrow(tdf) <= check_final_size & sum(is.na(tdf$time_infection)) != 0) {
 
     # Getting the first unfilled spot in the overall dataframe
     tdf_start_index <- min(which(is.na(tdf$time_infection)))
@@ -179,28 +179,25 @@ simulate_branching_process <- function(
 
     ## Initialize the dataframe with the seeding cases
     current_max_id <- max(tdf$infection_id)
-    tdf[tdf_start_index:(tdf_start_index + seeding_cases - 1), ] <- data.frame(
-      infection_id = (current_max_id + 1):(current_max_id + seeding_cases),
-      infection_ancestor = NA_integer_,
-      infection_generation = 1L,
-      time_infection = seeding_cases_time_infection,
-      symptomatic = seeding_cases_symptomatic,
-      time_symptom_onset = seeding_cases_time_symptom_onset,
-      severe = seeding_cases_severe,
-      seek_healthcare = seeding_case_seek_healthcare,
-      time_seek_healthcare = seeding_case_time_seek_healthcare,
-      seroconvert = seeding_case_seroconvert,
-      time_seroconversion = seeding_case_time_seroconvert,
-      time_seroreversion = seeding_case_time_serorevert,
-      n_offspring = NA_integer_,
-      outbreak = outbreak_index,
-      mutated = 0,
-      effect_size = 0,
-      infection_mn_offspring = initial_mn_offspring,
-      seeding = "seeding",
-      offspring_generated = FALSE,
-      stringsAsFactors = FALSE
-    )
+    tdf[tdf_start_index:(tdf_start_index + seeding_cases - 1), "infection_id"] <- (current_max_id + 1):(current_max_id + seeding_cases)
+    tdf[tdf_start_index:(tdf_start_index + seeding_cases - 1), "infection_ancestor"] <- NA_integer_
+    tdf[tdf_start_index:(tdf_start_index + seeding_cases - 1), "infection_generation"] <- 1L
+    tdf[tdf_start_index:(tdf_start_index + seeding_cases - 1), "time_infection"] <- seeding_cases_time_infection
+    tdf[tdf_start_index:(tdf_start_index + seeding_cases - 1), "symptomatic"] <- seeding_cases_symptomatic
+    tdf[tdf_start_index:(tdf_start_index + seeding_cases - 1), "time_symptom_onset"] <- seeding_cases_time_symptom_onset
+    tdf[tdf_start_index:(tdf_start_index + seeding_cases - 1), "severe"] <- seeding_cases_severe
+    tdf[tdf_start_index:(tdf_start_index + seeding_cases - 1), "seek_healthcare"] <- seeding_case_seek_healthcare
+    tdf[tdf_start_index:(tdf_start_index + seeding_cases - 1), "time_seek_healthcare"] <- seeding_case_time_seek_healthcare
+    tdf[tdf_start_index:(tdf_start_index + seeding_cases - 1), "seroconvert"] <- seeding_case_seroconvert
+    tdf[tdf_start_index:(tdf_start_index + seeding_cases - 1), "time_seroconversion"] <- seeding_case_time_seroconvert
+    tdf[tdf_start_index:(tdf_start_index + seeding_cases - 1), "time_seroreversion"] <- seeding_case_time_serorevert
+    tdf[tdf_start_index:(tdf_start_index + seeding_cases - 1), "n_offspring"] <- NA_integer_
+    tdf[tdf_start_index:(tdf_start_index + seeding_cases - 1), "outbreak"] <- outbreak_index
+    tdf[tdf_start_index:(tdf_start_index + seeding_cases - 1), "mutated"] <- 0
+    tdf[tdf_start_index:(tdf_start_index + seeding_cases - 1), "effect_size"] <- 0
+    tdf[tdf_start_index:(tdf_start_index + seeding_cases - 1), "infection_mn_offspring"] <- initial_mn_offspring
+    tdf[tdf_start_index:(tdf_start_index + seeding_cases - 1), "seeding"] <- "seeding"
+    tdf[tdf_start_index:(tdf_start_index + seeding_cases - 1), "offspring_generated"] <- FALSE
 
     ## This loops through each infection individually and generates offspring, and the status (symptoms, hospitalisation etc) of all of these offspring
     ## Note that we have check_final_size to cap how long we simulate for, but that when you reach this threshold you might have infections for which
@@ -349,6 +346,7 @@ generate_infections_time_series <- function(branching_process_output, population
 
   # Create a dataframe with counts of infections per day
   infection_counts <- branching_process_output |>
+    filter(!is.na(time_infection)) %>%
     mutate(day = floor(time_infection)) |>
     group_by(day) |>
     summarise(new_infections = n(), .groups = 'drop') |>
@@ -465,6 +463,7 @@ generate_symptom_onset_time_series <- function(branching_process_output, populat
 
   ## Calculating daily incidence of symptom onsets
   symptom_onset_incidence <- branching_process_output |>
+    filter(!is.na(time_infection)) %>%
     filter(symptomatic == 1) |>
     mutate(time_symptom_onset_floor = floor(time_symptom_onset)) |>
     group_by(time_symptom_onset_floor) |>
@@ -492,6 +491,7 @@ generate_healthcare_seeking_time_series <- function(branching_process_output, po
 
   ## Calculating daily incidence of healthcare seeking infections
   healthcare_seeking_incidence <- branching_process_output |>
+    filter(!is.na(time_infection)) %>%
     filter(seek_healthcare == 1) |>
     mutate(time_seek_healthcare_floor = floor(time_seek_healthcare)) |>
     group_by(time_seek_healthcare_floor) |>
@@ -518,6 +518,7 @@ generate_seropositivity_timeseries <- function(branching_process_output, populat
 
   ## Calculating daily incidence of hospitalisations
   seroconversion_df <- branching_process_output |>
+    filter(!is.na(time_infection)) %>%
     filter(seroconvert == 1) %>%
     mutate(time_seroconversion_floor = floor(time_seroconversion)) |>
     group_by(time_seroconversion_floor) %>%
@@ -527,6 +528,7 @@ generate_seropositivity_timeseries <- function(branching_process_output, populat
     mutate(cumulative_seroconversions = cumsum(n_seroconverted))
 
   seroreversion_df <- branching_process_output |>
+    filter(!is.na(time_infection)) %>%
     filter(seroconvert == 1) %>%
     mutate(time_seroreversion_floor = floor(time_seroreversion)) |>
     group_by(time_seroreversion_floor) %>%
