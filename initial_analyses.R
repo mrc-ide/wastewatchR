@@ -297,7 +297,28 @@ ggplot(combined_df_outbreak_wastewater_summary,
 
 
 ## Final set of plots for now -
+colnames(combined_df_time_detection_healthcare_summary)
+colnames(combined_df_time_detection_wastewater_summary)
 
+combined_overall <- combined_df_time_detection_healthcare_summary %>%
+  left_join(combined_df_time_detection_wastewater_summary,
+            by = c("R0", "annual_spillover_rate", "pathogen")) %>%
+  mutate(detection = ifelse(healthcare_seeking_first_day_median > wastewater_first_day_median,
+                            "wastewater", "clinical")) %>%
+  select(R0, annual_spillover_rate, pathogen, prob_symptomatic, prob_seek_healthcare, threshold,
+         healthcare_seeking_first_day_median, wastewater_first_day_median, detection) %>%
+  filter(prob_seek_healthcare == 0.9)
+
+ggplot(combined_overall,
+       aes(x = threshold, y = prob_symptomatic, fill = detection)) +
+  geom_tile() +
+  facet_grid(pathogen ~ R0) +
+  scale_fill_manual(values = c("wastewater" = "#80ADA0", "clinical" = "#EED2CC")) +
+  theme_bw() +
+  scale_x_log10(breaks = c(1e-3, 1e-2, 1e-1, 1, 10, 100, 1000),
+                labels = paste0(rev(c(1e-3, 1e-2, 1e-1, 1, 10, 100, 1000)), "x"))
+
+colnames(combined_overall)
 
 # output <- vector(mode = "list", length = nrow(overall_params))
 # time_detection_wastewater <- vector(mode = "list", length = nrow(overall_params))
