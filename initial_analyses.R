@@ -160,13 +160,14 @@ if (fresh_run) {
 
   }, cl = cl)
   stopCluster(cl)
-  saveRDS(list(results, overall_params), "inst/temp_results_10thDec2024.rds")
+  saveRDS(list(results = results,
+               overall_params = overall_params), "inst/temp_results_10thDec2024.rds")
 
 } else {
 
   overall <- readRDS("inst/temp_results_10thDec2024.rds")
-  overall_params <- overall$overall_params
-  results <- overall$results
+  overall_params <- overall[[2]]
+  results <- overall[[1]]
 
 }
 
@@ -229,7 +230,7 @@ ggplot(combined_df_time_detection_healthcare_outbreak_summary,
              nrow = 2, ncol = 4,
              labeller = labeller(R0 = function(x) paste0("R0 = ", x))) +
   theme_bw() +
-  labs(x = "Probability of Being Symptomatic", y = "Time to Detection",
+  labs(x = "Probability of Being Symptomatic", y = "Outbreak Detection Occurs At",
        color = "Prob.\nSeek Healthcare",
        fill = "Prob.\nSeek Healthcare")
 
@@ -263,36 +264,39 @@ ggplot(combined_df_time_detection_wastewater_summary,
                 labels = paste0(rev(c(1e-3, 1e-2, 1e-1, 1, 10, 100, 1000)), "x")) +
   theme(axis.text.x = element_text(angle = 45, hjust = 0.8, vjust = 1.2))
 
-
-
-
-combined_df_time_detection_wastewater <- results %>%
+## Plotting time to detection, healthcare
+combined_df_outbreak_wastewater <- results %>%
   lapply(function(x) x$time_detection_wastewater) %>%
   bind_rows() %>%
-  select(index, threshold, wastewater_first_day) %>%
-  pivot_wider(id_cols = index,
-              names_from = threshold,
-              values_from = wastewater_first_day,
-              names_glue = "sens_{threshold}")
+  select(index, threshold, wastewater_first_day, wastewater_outbreak_number )
 
-combined_df_time_detection_wastewater_summary <- overall_params %>%
-  left_join(combined_df_time_detection_wastewater, by = "index") %>%
-  group_by(R0, annual_spillover_rate, prob_symptomatic, prob_seek_healthcare, pathogen) %>%
-  summarise(across(starts_with("sens_"), ~ mean(.x, na.rm = TRUE))) %>%
-  pivot_longer(cols = starts_with("sens_"),
-               names_to = "threshold",
-               values_to = "value") %>%
-  mutate(threshold_value = as.numeric(sub("sens_", "", threshold))) %>%
-  ungroup() %>%
-  mutate(new_value = ifelse(is.nan(value), max(value, na.rm = TRUE), value))
+combined_df_outbreak_wastewater_summary <- combined_df_outbreak_wastewater %>%
+  mutate(wastewater_outbreak_number = ifelse(is.na(wastewater_outbreak_number) & !is.na(wastewater_first_day), 1, wastewater_outbreak_number)) %>%
+  left_join(overall_params, by = c("index" = "index2")) %>%
+  mutate(wastewater_outbreak_number = ifelse(!is.na(wastewater_outbreak_number), wastewater_outbreak_number, max(wastewater_outbreak_number, na.rm = TRUE))) %>%
+  group_by(R0, threshold, annual_spillover_rate, pathogen) %>%
+  summarise(wastewater_outbreak_median = median(wastewater_outbreak_number, na.rm = TRUE),
+            wastewater_outbreak_lower = quantile(wastewater_outbreak_number, 0.25, na.rm = TRUE),
+            wastewater_outbreak_upper = quantile(wastewater_outbreak_number, 0.75, na.rm = TRUE))
 
-ggplot(combined_df_time_detection_wastewater_summary, aes(x = log10(threshold_value), y = value)) +
-  geom_line(aes(col = factor(prob_seek_healthcare))) +
-  facet_grid(pathogen ~ R0)
+ggplot(combined_df_outbreak_wastewater_summary,
+       aes(x = threshold, y = wastewater_outbreak_median)) +
+  geom_line() +
+  geom_ribbon(aes(ymin = wastewater_outbreak_lower,
+                  ymax = wastewater_outbreak_upper,
+                  col = NULL),
+              alpha = 0.2) +
+  facet_wrap(~ pathogen + R0, , scales = "free_y",
+             nrow = 2, ncol = 4,
+             labeller = labeller(R0 = function(x) paste0("R0 = ", x))) +
+  theme_bw() +
+  labs(x = "Sensitivity Relative to SC2 Surveillance", y = "Outbreak Detection Occurs At") +
+  scale_x_log10(breaks = c(1e-3, 1e-2, 1e-1, 1, 10, 100, 1000),
+                labels = paste0(rev(c(1e-3, 1e-2, 1e-1, 1, 10, 100, 1000)), "x")) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 0.8, vjust = 1.2))
 
-results[[1]]$time_detection_healthcare
-results[[1]]$time_detection_wastewater
 
+## Final set of plots for now -
 
 
 # output <- vector(mode = "list", length = nrow(overall_params))
