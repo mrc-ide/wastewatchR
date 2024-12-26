@@ -2,8 +2,9 @@
 #'
 #' @param day The day being considered
 #' @param infection_counts A time series of the number of individuals infected on each day
-#' @param shedding_dist The distribution of amount shed over time following infection.
-#'
+#' @param shedding_dist The distribution of amount shed over time following infection, normalised so the amount of shedding on the day
+#' with the maximum amount is 1.
+#' @param shedding_relative_SC2 Amount of shedding that occurs relative to SARS-CoV-2 (required given our pinning to the SC2 data from Hewitt et al)
 #' @family utils
 #' @export
 calculate_shedding <- function(day, infection_counts, shedding_dist, shedding_relative_SC2) {
@@ -26,8 +27,9 @@ calculate_shedding <- function(day, infection_counts, shedding_dist, shedding_re
 #' weighted by the shedding distribution.
 #'
 #' @param branching_process_output Output from simulate_branching_process
-#' @param shedding_dist The distribution of amount shed over time following infection.
-#' @param population The population size used in the simulate_branching_process output
+#' @param shedding_dist The distribution of amount shed over time following infection, normalised so the amount of shedding on the day
+#' with the maximum amount is 1.
+#' @param shedding_relative_SC2 Amount of shedding that occurs relative to SARS-CoV-2 (required given our pinning to the SC2 data from Hewitt et al)
 #'
 #' @family post-processing
 #' @export
@@ -76,10 +78,9 @@ calculate_wastewater_ttd <- function(wastewater_number_shedding_time_series,
                                         align = "right",
                                         partial = TRUE))
   }
-
-  if (sampling_method %in% c("autosampler", "grab")) {
-    warning("Note that as we don't do sub-daily time-resolution atm, there is no difference in our approach to representing autosampling and grab")
-  }
+  # if (sampling_method %in% c("autosampler", "grab")) {
+  #   warning("Note that as we don't do sub-daily time-resolution atm, there is no difference in our approach to representing autosampling and grab")
+  # }
 
   ## Checking that the user has specified a suitable detection type
   if (!(detection_approach %in% c("threshold", "probit_curve", "per_person_probability"))) {
@@ -95,11 +96,9 @@ calculate_wastewater_ttd <- function(wastewater_number_shedding_time_series,
   ## of shedding individuals eclipses said threshold
   if (detection_approach == "threshold") {
 
-    if (!("threshold_limits" %in% names(detection_params))) {
-      stop("detection_params must contain a named element called threshold_limits which contains reals that specify sensitivity per 100,000 population")
-    }
-    if (!("population" %in% names(detection_params))) {
-      stop("detection_params must contain a named element called population which contains the size of the population")
+    # Check that the necessary logistic parameters exist
+    if (!all(c("threshold_limits", "population") %in% names(detection_params))) {
+      stop("For detection_approach == 'threshold', detection_params must contain threshold_limits and population")
     }
     if (sum(!is.numeric(detection_params$threshold_limits)) > 0) {
       stop("threshold_limits must only contain numerics")
@@ -115,19 +114,17 @@ calculate_wastewater_ttd <- function(wastewater_number_shedding_time_series,
       ungroup()
   }
 
-  ## For detection_approach == "probit_curve", the effective number of shedding at each sampling timepoint is converted
+  ## For detection_approach == "logistic_curve", the effective number of shedding at each sampling timepoint is converted
   ## to a probability and a draw done from a bernoulli. ttd is the first time at which the bernoulli is successful.
-  if (detection_approach == "probit_curve") {
+  if (detection_approach == "logistic_curve") {
 
-    # Check that the necessary probit parameters exist
-    # (Rename these as needed, e.g. "probit_intercept", "probit_slope", etc.)
-    if (!all(c("logistic_beta_0", "logistic_beta_1", "seed", "limit_of_detection") %in% names(detection_params))) {
-      stop("For detection_approach == 'probit_curve', detection_params must contain logistic_beta_0, logistic_beta_1, limit_of_detection and a seed")
+    # Check that the necessary logistic parameters exist
+    if (!all(c("logistic_beta_0", "logistic_beta_1", "seed", "limit_of_detection", "population") %in% names(detection_params))) {
+      stop("For detection_approach == 'logistic_curve', detection_params must contain logistic_beta_0, logistic_beta_1, limit_of_detection and a seed")
     }
 
-    set.seed(detection_params$seed)
-
     # Filter to the sampling days
+    set.seed(detection_params$seed)
     sampled_data <- wastewater_number_shedding_time_series %>%
       filter(day %% sampling_frequency == 0) %>%
       mutate(
@@ -135,11 +132,10 @@ calculate_wastewater_ttd <- function(wastewater_number_shedding_time_series,
         prob_detect = ifelse(shedding_value < detection_params$limit_of_detection, 0,
                              plogis(
                                detection_params$logistic_beta_0 +     # -1.229996 from Hewitt et al Fig 5B
-                               detection_params$logistic_beta_1 *   # 0.258775 from Hewitt et al Fig 5B
+                               detection_params$logistic_beta_1 *     # 0.258775 from Hewitt et al Fig 5B
                                   (100000 * shedding_value / detection_params$population))),
         # Draw once from a Bernoulli with this probability
-        detect_draw = rbinom(n = n(), size = 1, prob = prob_detect)
-      )
+        detect_draw = rbinom(n = n(), size = 1, prob = prob_detect))
 
     # The time-to-detection is the first sampled day at which detect_draw == 1
     detection_day <- sampled_data %>%
@@ -153,12 +149,11 @@ calculate_wastewater_ttd <- function(wastewater_number_shedding_time_series,
 
   }
 
-  ## For detection_approach == "per_person_probability", we look at new_infections
-  ## on each sampling day, do a binomial draw with size = new_infections and
-  ## prob = detection_params$per_infection_probability_detection.
-  ## The time to detection is the first day that draw > 0. Note that we do this
-  ## based on the timing of the infection and so the timing isn't quite right
-  ## (we would have do something weird with the shedding dist to fully capture this approach)
+  ## For detection_approach == "per_person_probability", we look at new_infections on each sampling day, do a
+  ## binomial draw with size = new_infections and prob = detection_params$per_infection_probability_detection.
+  ## The time to detection is the first day that draw > 0.
+  ## Note: We do this based on the timing of the infection and so the timing isn't quite right - we would have do
+  ## something weird with the shedding dist to fully capture this approach.
   if (detection_approach == "per_person_probability") {
     # Check that the necessary parameter is present
     if (!all(c("per_infection_probability_detection") %in% names(detection_params))) {

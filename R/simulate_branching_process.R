@@ -417,7 +417,7 @@ generate_outbreak_size <- function(branching_process_output, population) {
 #' @import dplyr
 #' @import tidyr
 #' @export
-generate_symptom_onset_time_series <- function(branching_process_output, population) {
+generate_symptom_onset_time_series <- function(branching_process_output) {
 
   ## NOTE - NEED TO CHANGE THIS TO MATCH THE NEW STRUCTURE OF generate_healthcare_seeking_time_series
   ## Calculating daily incidence of symptom onsets
@@ -429,8 +429,7 @@ generate_symptom_onset_time_series <- function(branching_process_output, populat
     summarise(incidence_symptom_onset = n()) |>
     complete(time_symptom_onset_floor = seq(0, max(time_symptom_onset_floor, na.rm = TRUE), by = 1),
              fill = list(incidence_symptom_onset = 0)) |>
-    rename(day = time_symptom_onset_floor) %>%
-    mutate(incidence_symptom_onset_per_thousand = 1000 * incidence_symptom_onset / population)
+    rename(day = time_symptom_onset_floor)
   return(symptom_onset_incidence)
 
 }
@@ -446,7 +445,7 @@ generate_symptom_onset_time_series <- function(branching_process_output, populat
 #'
 #' @family post-processing
 #' @export
-generate_healthcare_seeking_time_series <- function(branching_process_output, population) {
+generate_healthcare_seeking_time_series <- function(branching_process_output) {
 
   ## Generating base time-series to then modify
   max_day <- max(c(branching_process_output$time_infection,
