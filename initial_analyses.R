@@ -170,7 +170,7 @@ if (fresh_run) {
   results <- overall[[1]]
 
 }
-
+overall_params$index2 <- 1:nrow(overall_params)
 
 ## Plotting time to detection, healthcare
 combined_df_time_detection_healthcare <- results %>%
@@ -307,7 +307,7 @@ combined_overall <- combined_df_time_detection_healthcare_summary %>%
                             "wastewater", "clinical")) %>%
   select(R0, annual_spillover_rate, pathogen, prob_symptomatic, prob_seek_healthcare, threshold,
          healthcare_seeking_first_day_median, wastewater_first_day_median, detection) %>%
-  filter(prob_seek_healthcare == 0.9)
+  filter(prob_seek_healthcare == 0.1)
 
 ggplot(combined_overall,
        aes(x = threshold, y = prob_symptomatic, fill = detection)) +
@@ -318,8 +318,7 @@ ggplot(combined_overall,
   scale_x_log10(breaks = c(1e-3, 1e-2, 1e-1, 1, 10, 100, 1000),
                 labels = paste0(rev(c(1e-3, 1e-2, 1e-1, 1, 10, 100, 1000)), "x"))
 
-colnames(combined_overall)
-
+# colnames(combined_overall)
 # output <- vector(mode = "list", length = nrow(overall_params))
 # time_detection_wastewater <- vector(mode = "list", length = nrow(overall_params))
 # time_detection_healthcare <- vector(mode = "list", length = nrow(overall_params))
