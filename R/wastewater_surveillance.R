@@ -42,6 +42,9 @@ generate_number_shedding_time_series <- function(branching_process_output, shedd
     rowwise() |>
     mutate(shedding_value = calculate_shedding(day, infection_counts, shedding_dist)) %>%
     mutate(shedding_value_per_thousand = 1000 * shedding_value / population)
+  shedding_results <- shedding_results %>%
+    left_join(infection_counts, by = "day")
+
   return(shedding_results)
 
 }
@@ -73,7 +76,6 @@ calculate_wastewater_ttd <- function(wastewater_number_shedding_time_series,
                                         FUN = mean,
                                         align = "right",
                                         partial = TRUE))
-
   }
 
   if (sampling_method %in% c("autosampler", "grab")) {
@@ -120,9 +122,11 @@ calculate_wastewater_ttd <- function(wastewater_number_shedding_time_series,
 
     # Check that the necessary probit parameters exist
     # (Rename these as needed, e.g. "probit_intercept", "probit_slope", etc.)
-    if (!all(c("probit_beta_0", "probit_beta_1") %in% names(detection_params))) {
-      stop("For detection_approach == 'probit_curve', detection_params must contain probit_beta_0 and probit_beta_1.")
+    if (!all(c("probit_beta_0", "probit_beta_1", "seed") %in% names(detection_params))) {
+      stop("For detection_approach == 'probit_curve', detection_params must contain probit_beta_0 and probit_beta_1 and a seed")
     }
+
+    set.seed(detection_params$seed)
 
     # Filter to the sampling days
     sampled_data <- wastewater_number_shedding_time_series %>%
@@ -140,9 +144,9 @@ calculate_wastewater_ttd <- function(wastewater_number_shedding_time_series,
     # The time-to-detection is the first sampled day at which detect_draw == 1
     detection_day <- sampled_data %>%
       ungroup() %>%
-      filter(detect_draw == 1) %>%
-      summarize(first_day = ifelse(n() == 0, NA_real_, min(day))) %>%
-      pull(first_day)
+      dplyr::filter(detect_draw == 1) %>%
+      dplyr::summarize(first_day = ifelse(n() == 0, NA_real_, min(day))) %>%
+      dplyr::pull(first_day)
 
     # Return as a tibble with a single row
     wastewater_shedding_ttd <- tibble(wastewater_first_day = detection_day)

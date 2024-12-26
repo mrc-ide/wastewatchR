@@ -55,7 +55,14 @@ calculate_wastewater_ttd(wastewater_number_shedding_time_series = shedding,
                          sampling_frequency = 14,
                          sampling_method = "autosampler",
                          detection_approach = "threshold",
-                         detection_params = list(population = 100000,
+                         detection_params = list(population = 10000,
+                                                 threshold_limits = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 40, 80, 150, 250)))
+
+calculate_wastewater_ttd(wastewater_number_shedding_time_series = shedding,
+                         sampling_frequency = 14,
+                         sampling_method = "moore_swab",
+                         detection_approach = "threshold",
+                         detection_params = list(population = 10000,
                                                  threshold_limits = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 40, 80, 150, 250)))
 
 calculate_wastewater_ttd(wastewater_number_shedding_time_series = shedding,
@@ -64,7 +71,17 @@ calculate_wastewater_ttd(wastewater_number_shedding_time_series = shedding,
                          detection_approach = "probit_curve",
                          detection_params = list(population = 100000,
                                                  probit_beta_0 = -3,
-                                                 probit_beta_1 = 1))
+                                                 probit_beta_1 = 1,
+                                                 seed = 1000))
+
+calculate_wastewater_ttd(wastewater_number_shedding_time_series = shedding,
+                         sampling_frequency = 1,
+                         sampling_method = "moore_swab",
+                         detection_approach = "probit_curve",
+                         detection_params = list(population = 100000,
+                                                 probit_beta_0 = -3,
+                                                 probit_beta_1 = 1,
+                                                 seed = 100))
 
 
 
