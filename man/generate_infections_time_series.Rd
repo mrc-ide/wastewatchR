@@ -4,7 +4,7 @@
 \alias{generate_infections_time_series}
 \title{Convert stochastic realisation of branching process into number of new infections time-series}
 \usage{
-generate_infections_time_series(branching_process_output, population)
+generate_infections_time_series(branching_process_output)
 }
 \arguments{
 \item{branching_process_output}{Output from simulate_branching_process}

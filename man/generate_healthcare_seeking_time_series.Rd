@@ -4,7 +4,7 @@
 \alias{generate_healthcare_seeking_time_series}
 \title{Convert stochastic realisation of branching process into hospitalisation time-series}
 \usage{
-generate_healthcare_seeking_time_series(branching_process_output, population)
+generate_healthcare_seeking_time_series(branching_process_output)
 }
 \arguments{
 \item{branching_process_output}{Output from simulate_branching_process}

@@ -5,7 +5,7 @@
 \title{Convert stochastic realisation of branching process into symptom onset time-series
 This function converts a branching process output into time-series of symptom onsets}
 \usage{
-generate_symptom_onset_time_series(branching_process_output, population)
+generate_symptom_onset_time_series(branching_process_output)
 }
 \arguments{
 \item{branching_process_output}{Output from simulate_branching_process}
