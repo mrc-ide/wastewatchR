@@ -32,14 +32,14 @@ model_output <- simulate_branching_process(initial_mn_offspring = 0.75,
 x <- generate_outbreak_size(model_output, 1000000)
 
 # Post-processing
-infections <- generate_infections_time_series(branching_process_output = model_output, population = population)
+infections <- generate_infections_time_series(branching_process_output = model_output)
 plot(infections$day, infections$new_infections, type = "l", ylim = c(0, 50),
      xlab = "Time", ylab = "Infections")
 
 symptom_onsets <- generate_symptom_onset_time_series(branching_process_output = model_output, population = population)
 plot(symptom_onsets$day, symptom_onsets$incidence_symptom_onset, type = "l")
 
-healthcare_seeking <- generate_healthcare_seeking_time_series(branching_process_output = model_output, population = population)
+healthcare_seeking <- generate_healthcare_seeking_time_series(branching_process_output = model_output)
 plot(healthcare_seeking$day, healthcare_seeking$incidence_seek_healthcare, type = "l")
 
 healthcare_seeking <- generate_healthcare_seeking_time_series(branching_process_output = model_output, population = population)
@@ -49,11 +49,17 @@ seropositivity <- generate_seropositivity_timeseries(branching_process_output = 
 plot(seropositivity$time, seropositivity$seropositive_abs)
 plot(seropositivity$time, log10(seropositivity$cumulative_seroconversions + 1), type = "l")
 
-shedding_dist <- EpiSewer::get_discrete_gamma(gamma_mean = 4, gamma_sd = 2.4, maxX = 16)
-shedding <- generate_number_shedding_time_series(branching_process_output = model_output, shedding_dist = shedding_dist, population = population)
+shedding_dist <- EpiSewer::get_discrete_gamma(gamma_mean = 4, gamma_sd = 2.4, maxX = 16) / max(EpiSewer::get_discrete_gamma(gamma_mean = 4, gamma_sd = 2.4, maxX = 16))
+shedding <- generate_number_shedding_time_series(branching_process_output = model_output, shedding_dist = shedding_dist, shedding_relative_SC2 = 5)
 plot(shedding$day, log(shedding$shedding_value + 1))
 
 
+d <- ggplot(infections, aes(x = day, y = new_infections)) +
+  geom_line(col = "#D49137") +
+  coord_cartesian(xlim = c(0, 365 * 3), ylim = c(0, 10)) +
+  scale_y_continuous(breaks = c(0, 2, 4, 6, 8, 10)) +
+  labs(x = "Time (Days)", y = "Infection Incidence", title = "Daily Incidence of Infections") +
+  theme_bw()
 a <- ggplot(healthcare_seeking, aes(x = day, y = incidence_seek_healthcare)) +
   geom_line(col = "#8075FF") +
   coord_cartesian(xlim = c(0, 365 * 3), ylim = c(0, 5)) +
@@ -61,8 +67,8 @@ a <- ggplot(healthcare_seeking, aes(x = day, y = incidence_seek_healthcare)) +
   theme_bw()
 b <- ggplot(shedding, aes(x = day, y = log(shedding_value + 1))) +
   geom_line(col = "#1DBD83") +
-  coord_cartesian(xlim = c(0, 365 * 3), ylim = c(0, 1)) +
-  labs(x = "Time (Days)", y = "Log(Gene Copies per ml)", title = "Wastewater Surveillance") +
+  coord_cartesian(xlim = c(0, 365 * 3), ylim = c(0, 4)) +
+  labs(x = "Time (Days)", y = "Effective Number of People Shedding", title = "Wastewater Surveillance") +
   theme_bw()
 c <- ggplot(seropositivity, aes(x = time, y = 100 * 2500 * seropositive_prop_pop)) +
   geom_line(col = "#D566C5") + # "#B279A7"

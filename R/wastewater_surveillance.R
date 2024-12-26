@@ -48,7 +48,7 @@ generate_number_shedding_time_series <- function(branching_process_output, shedd
 
 }
 
-
+#' @export
 calculate_wastewater_ttd <- function(wastewater_number_shedding_time_series,
                                      sampling_frequency,
                                      sampling_method,

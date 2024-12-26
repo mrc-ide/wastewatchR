@@ -38,6 +38,8 @@ shedding <- generate_number_shedding_time_series(branching_process_output = mode
                                                  shedding_dist = shedding_dist,
                                                  shedding_relative_SC2 = 1)
 plot(shedding$day, shedding$shedding_value)
+plot(shedding$day, shedding$new_infections)
+
 plot(infections$day, infections$new_infections)
 
 ggplot(infections, aes(x = day, y = new_infections)) +
@@ -49,7 +51,7 @@ ggplot(infections, aes(x = day, y = new_infections)) +
 ggplot(shedding, aes(x = day, y = shedding_value)) +
   geom_line(col = "#1DBD83") +
   coord_cartesian(xlim = c(0, 365 * 3), ylim = c(0, 10)) +
-  labs(x = "Time (Days)", y = "Log(Gene Copies per ml)", title = "Wastewater Surveillance") +
+  labs(x = "Time (Days)", y = "Effective Number of People Shedding", title = "Wastewater Surveillance") +
   theme_bw()
 
 
@@ -87,6 +89,9 @@ calculate_wastewater_ttd(wastewater_number_shedding_time_series = shedding,
                                                  seed = 100))
 
 
+x <- seq(0, 15, 0.01)
+y <- plogis(-5 + x * 1)
+plot(x, y, type = "l", xlab = "Effective Number Shedding", ylab = "Prob. Detection", las = 1, lwd = 4)
 
 
 cowplot::plot_grid(a, b, c, nrow = 3)
