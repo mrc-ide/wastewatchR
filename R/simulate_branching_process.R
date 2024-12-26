@@ -408,118 +408,38 @@ generate_outbreak_size <- function(branching_process_output, population) {
   return(overall_df)
 }
 
-#' Convert stochastic realisation of branching process into symptom onset time-series
-#' This function converts a branching process output into time-series of symptom onsets
-#' @param branching_process_output Output from simulate_branching_process
-#' @param population The population size used in the simulate_branching_process output
-#'
-#' @family post-processing
-#' @import dplyr
-#' @import tidyr
-#' @export
-generate_symptom_onset_time_series <- function(branching_process_output) {
-
-  ## NOTE - NEED TO CHANGE THIS TO MATCH THE NEW STRUCTURE OF generate_healthcare_seeking_time_series
-  ## Calculating daily incidence of symptom onsets
-  symptom_onset_incidence <- branching_process_output |>
-    filter(!is.na(time_infection)) %>%
-    filter(symptomatic == 1) |>
-    mutate(time_symptom_onset_floor = floor(time_symptom_onset)) |>
-    group_by(time_symptom_onset_floor) |>
-    summarise(incidence_symptom_onset = n()) |>
-    complete(time_symptom_onset_floor = seq(0, max(time_symptom_onset_floor, na.rm = TRUE), by = 1),
-             fill = list(incidence_symptom_onset = 0)) |>
-    rename(day = time_symptom_onset_floor)
-  return(symptom_onset_incidence)
-
-}
-
-#' Convert stochastic realisation of branching process into hospitalisation time-series
-#'
-#' This function converts a branching process output into time-series of hospitalisations
-#' and hospital occupancy.
-#'
-#' @param branching_process_output Output from simulate_branching_process
-#' @param population The population size used in the simulate_branching_process output
-#'
+#' Extracts relevant information about the outbreak occurring nearest to the
+#' @param outbreak_info Output from generate_outbreak_size
+#' @param outbreak_id An identifier for the outbreak you want to extract info for - either time or outbreak number
+#' @param id_type Either time or outbreak number
 #'
 #' @family post-processing
 #' @export
-generate_healthcare_seeking_time_series <- function(branching_process_output) {
+extract_outbreak_characteristics_time <- function(outbreak_info, outbreak_id, id_type = "time") {
 
-  ## Generating base time-series to then modify
-  max_day <- max(c(branching_process_output$time_infection,
-                   branching_process_output$time_symptom_onset,
-                   branching_process_output$time_seek_healthcare),
-                 na.rm = TRUE)
-  healthcare_seeking_incidence_base <- data.frame(day = 1:floor(max_day), incidence_seek_healthcare = 0)
-
-  ## Calculating daily incidence of healthcare seeking infections
-  healthcare_seeking_incidence <- branching_process_output |>
-    filter(!is.na(time_infection)) %>%
-    filter(seek_healthcare == 1)
-
-  ## If no incidence, just return dataframe of 0s
-  if (nrow(healthcare_seeking_incidence) == 0) {
-    healthcare_seeking_incidence <- healthcare_seeking_incidence_base
-
-  ## Else, modify the base df as appropriate
-  } else {
-    healthcare_seeking_incidence <- healthcare_seeking_incidence |>
-      mutate(time_seek_healthcare_floor = floor(time_seek_healthcare)) |>
-      group_by(time_seek_healthcare_floor) |>
-      summarise(incidence_seek_healthcare = n()) |>
-      rename(day = time_seek_healthcare_floor)
-    index_to_replace <- healthcare_seeking_incidence_base$day %in% healthcare_seeking_incidence$day
-    healthcare_seeking_incidence_base$incidence_seek_healthcare[index_to_replace] <- healthcare_seeking_incidence$incidence_seek_healthcare
-    healthcare_seeking_incidence <- healthcare_seeking_incidence_base
+  # Check id_type
+  if (!(id_type %in% c("time", "outbreak_number"))) {
+    stop("id_type must either be time or outbreak number")
   }
-  return(healthcare_seeking_incidence)
-}
 
-#' Convert stochastic realisation of branching process into hospitalisation time-series
-#'
-#' This function converts a branching process output into time-series of hospitalisations
-#' and hospital occupancy.
-#'
-#' @param branching_process_output Output from simulate_branching_process
-#' @param population The population size used in the simulate_branching_process output
-#'
-#' @family post-processing
-#' @export
-generate_seropositivity_timeseries <- function(branching_process_output, population) {
-
-  ## Calculating daily incidence of hospitalisations
-  seroconversion_df <- branching_process_output |>
-    filter(!is.na(time_infection)) %>%
-    filter(seroconvert == 1) %>%
-    mutate(time_seroconversion_floor = floor(time_seroconversion)) |>
-    group_by(time_seroconversion_floor) %>%
-    summarise(n_seroconverted = n()) %>%
-    complete(time_seroconversion_floor = seq(0, max(time_seroconversion_floor, na.rm = TRUE), by = 1),
-             fill = list(n_seroconverted = 0)) |>
-    mutate(cumulative_seroconversions = cumsum(n_seroconverted))
-
-  seroreversion_df <- branching_process_output |>
-    filter(!is.na(time_infection)) %>%
-    filter(seroconvert == 1) %>%
-    mutate(time_seroreversion_floor = floor(time_seroreversion)) |>
-    group_by(time_seroreversion_floor) %>%
-    summarise(n_seroreverted = n()) %>%
-    complete(time_seroreversion_floor = seq(0, max(time_seroreversion_floor, na.rm = TRUE), by = 1),
-             fill = list(n_seroreverted = 0)) |>
-    mutate(cumulative_seroreversions = cumsum(n_seroreverted))
-
-  max_seroconversion_value <- max(seroconversion_df$cumulative_seroconversions)
-  sero_df <- seroconversion_df %>%
-    full_join(seroreversion_df, by = c("time_seroconversion_floor" = "time_seroreversion_floor")) %>%
-    rename(time = time_seroconversion_floor) %>%
-    complete(time = seq(0, max(time, na.rm = TRUE), by = 1),
-             fill = list(n_seroconverted = 0)) %>%
-    complete(time = seq(0, max(time, na.rm = TRUE), by = 1),
-             fill = list(cumulative_seroconversions = max_seroconversion_value)) %>%
-    mutate(seropositive_abs = cumulative_seroconversions - cumulative_seroreversions) %>% ## NOTE - CHECK THIS IS CORRECT!!
-    mutate(seropositive_prop_pop = seropositive_abs / population)
-
-  return(sero_df)
+  # Note we make the assumption that when there are overlapping outbreaks (i.e. a new one starts before the
+  # previous one is finished). At worst, this will be the first epidemic of several that contribute to wastewater
+  # detection, so I'm not worried too much
+  if (id_type == "time") {
+    single_outbreak_df <- outbreak_info %>%
+      filter(outbreak_start >= outbreak_id)
+    if (dim(single_outbreak_df)[1] == 0) {
+      stop("no outbreak occurs after the time specified")
+    } else {
+      single_outbreak_df <- single_outbreak_df %>%
+        filter(outbreak == min(outbreak))
+    }
+  } else if (id_type == "outbreak_number") {
+    single_outbreak_df <- outbreak_info %>%
+      filter(outbreak == outbreak_id)
+    if (dim(single_outbreak_df)[1] == 0) {
+      stop("no outbreak with that id exists")
+    }
+  }
+  return(single_outbreak_df)
 }
