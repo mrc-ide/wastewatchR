@@ -3,7 +3,7 @@ library(wastewatchR); library(dplyr); library(tidyr); library(ggplot2)
 
 # Run branching process
 population <- 1000000
-model_output <- simulate_branching_process(initial_mn_offspring = 0.85,
+model_output <- simulate_branching_process(initial_mn_offspring = 0.15,
                                            disp_offspring = 1.0,
                                            generation_time_dist = function(n) { rgamma(n, shape = 12, rate = 2) },
                                            prob_symptomatic = 0.8,
@@ -30,13 +30,15 @@ model_output <- simulate_branching_process(initial_mn_offspring = 0.85,
                                            max_num_outbreaks = 200,
                                            seed = 2025)
 
-infections <- generate_infections_time_series(branching_process_output = model_output, population = population)
-shedding_dist <- EpiSewer::get_discrete_gamma(gamma_mean = 4, gamma_sd = 2.4, maxX = 16)
-shedding <- generate_number_shedding_time_series(branching_process_output = model_output, shedding_dist = shedding_dist, population = population)
-
-## something important for me to work out here is whether I want shedding_dist to sum to 1 (so proportion of total shed over time)
-## or whether I want to normalise it to peak shedding (i.e. make peak shedding the max). This is unclear to me currently.
-## I think in practice it doesn't matter too much as long as I make sure I'm using the same quantity to pin down the sensitivity.
+infections <- generate_infections_time_series(branching_process_output = model_output)
+shedding_dist <- EpiSewer::get_discrete_gamma(gamma_mean = 4, gamma_sd = 2.4, maxX = 16) / max(EpiSewer::get_discrete_gamma(gamma_mean = 4, gamma_sd = 2.4, maxX = 16))
+# note that shedding dist is normalised to highest values to match the approach used in Hewitt et al.
+# can think of this quantity as "the effective number of people shedding at their peak shedding time"
+shedding <- generate_number_shedding_time_series(branching_process_output = model_output,
+                                                 shedding_dist = shedding_dist,
+                                                 shedding_relative_SC2 = 1)
+plot(shedding$day, shedding$shedding_value)
+plot(infections$day, infections$new_infections)
 
 ggplot(infections, aes(x = day, y = new_infections)) +
   geom_line(col = "#8075FF") +

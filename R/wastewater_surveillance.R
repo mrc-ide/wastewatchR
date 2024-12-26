@@ -6,12 +6,12 @@
 #'
 #' @family utils
 #' @export
-calculate_shedding <- function(day, infection_counts, shedding_dist) {
+calculate_shedding <- function(day, infection_counts, shedding_dist, shedding_relative_SC2) {
   # Shift infection counts based on the day difference
   shedding_contributions <- sapply(1:length(shedding_dist), function(i) {
     lagged_day <- day - (i - 1)
     if (lagged_day >= 0) {
-      return(infection_counts$new_infections[lagged_day + 1] * shedding_dist[i])
+      return(infection_counts$new_infections[lagged_day + 1] * shedding_dist[i] * shedding_relative_SC2)
     } else {
       return(0)
     }
@@ -31,17 +31,16 @@ calculate_shedding <- function(day, infection_counts, shedding_dist) {
 #'
 #' @family post-processing
 #' @export
-generate_number_shedding_time_series <- function(branching_process_output, shedding_dist, population) {
+generate_number_shedding_time_series <- function(branching_process_output, shedding_dist, shedding_relative_SC2) {
 
   max_day <- ceiling(max(branching_process_output$time_infection, na.rm = TRUE))
   days <- seq(0, max_day, by = 1)
-  infection_counts <- generate_infections_time_series(branching_process_output, population)
+  infection_counts <- generate_infections_time_series(branching_process_output)
 
   # Apply the function for each day
   shedding_results <- tibble(day = days) |>
     rowwise() |>
-    mutate(shedding_value = calculate_shedding(day, infection_counts, shedding_dist)) %>%
-    mutate(shedding_value_per_thousand = 1000 * shedding_value / population)
+    mutate(shedding_value = calculate_shedding(day, infection_counts, shedding_dist, shedding_relative_SC2))
   shedding_results <- shedding_results %>%
     left_join(infection_counts, by = "day")
 
