@@ -122,7 +122,7 @@ calculate_wastewater_ttd <- function(wastewater_number_shedding_time_series,
 
     # Check that the necessary probit parameters exist
     # (Rename these as needed, e.g. "probit_intercept", "probit_slope", etc.)
-    if (!all(c("probit_beta_0", "probit_beta_1", "seed") %in% names(detection_params))) {
+    if (!all(c("logistic_beta_0", "logistic_beta_1", "seed") %in% names(detection_params))) {
       stop("For detection_approach == 'probit_curve', detection_params must contain probit_beta_0 and probit_beta_1 and a seed")
     }
 
@@ -133,10 +133,10 @@ calculate_wastewater_ttd <- function(wastewater_number_shedding_time_series,
       filter(day %% sampling_frequency == 0) %>%
       mutate(
         # Convert 'shedding_value' to a probability of detection via probit
-        prob_detect = pnorm(
-          detection_params$probit_beta_0 +
-            detection_params$probit_beta_1 *
-            (100000 * shedding_value / detection_params$population)),
+        prob_detect = plogis(
+          detection_params$logistic_beta_0 +
+            detection_params$logistic_beta_1 *
+            (100000 * shedding_value / detection_params$population))
         # Draw once from a Bernoulli with this probability
         detect_draw = rbinom(n = n(), size = 1, prob = prob_detect)
       )
