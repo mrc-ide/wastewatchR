@@ -134,8 +134,8 @@ calculate_wastewater_ttd <- function(wastewater_number_shedding_time_series,
       mutate(
         # Convert 'shedding_value' to a probability of detection via probit
         prob_detect = plogis(
-          detection_params$logistic_beta_0 +
-            detection_params$logistic_beta_1 *
+          detection_params$logistic_beta_0 +     # -1.229996 from Hewitt et al Fig 5B
+            detection_params$logistic_beta_1 *   # 0.258775 from Hewitt et al Fig 5B
             (100000 * shedding_value / detection_params$population))
         # Draw once from a Bernoulli with this probability
         detect_draw = rbinom(n = n(), size = 1, prob = prob_detect)

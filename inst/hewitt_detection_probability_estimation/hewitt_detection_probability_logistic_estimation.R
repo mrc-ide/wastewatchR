@@ -35,3 +35,4 @@ beta_mean  <- mean(posterior_draws$beta)
 check <- plogis(alpha_mean + beta_mean * Infections)
 plot(Infections, check, type = "l")
 points(Infections, Probability, pch = 20)
+
