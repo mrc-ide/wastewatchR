@@ -153,6 +153,39 @@ calculate_wastewater_ttd <- function(wastewater_number_shedding_time_series,
 
   }
 
+  ## For detection_approach == "per_person_probability", we look at new_infections
+  ## on each sampling day, do a binomial draw with size = new_infections and
+  ## prob = detection_params$per_infection_probability_detection.
+  ## The time to detection is the first day that draw > 0. Note that we do this
+  ## based on the timing of the infection and so the timing isn't quite right
+  ## (we would have do something weird with the shedding dist to fully capture this approach)
+  if (detection_approach == "per_person_probability") {
+    # Check that the necessary parameter is present
+    if (!all(c("per_infection_probability_detection") %in% names(detection_params))) {
+      stop("For detection_approach == 'per_person_probability', detection_params must contain per_infection_probability_detection")
+    }
+
+    # Filter by sampling frequency
+    sampled_data <- wastewater_number_shedding_time_series %>%
+      filter(day %% sampling_frequency == 0) %>%
+      mutate(
+        detect_draw = rbinom(
+          n = n(),
+          size = new_infections,
+          prob = detection_params$per_infection_probability_detection
+        )
+      )
+
+    # TTD is the first day the binomial draw is > 0
+    detection_day <- sampled_data %>%
+      ungroup() %>%
+      dplyr::filter(detect_draw > 0) %>%
+      dplyr::summarize(first_day = ifelse(n() == 0, NA_real_, min(day))) %>%
+      dplyr::pull(first_day)
+
+    wastewater_shedding_ttd <- tibble(wastewater_first_day = detection_day)
+  }
+
   return(wastewater_shedding_ttd)
 
 }
