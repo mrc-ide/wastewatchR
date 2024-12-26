@@ -85,7 +85,7 @@ if (fresh_run) {
     outbreak_info <- generate_outbreak_size(branching_process_output = model_output, population = population)
 
     ## Calculating number of healthcare seeking individuals over time
-    healthcare_seeking_thresholds <- seq(1, 10, 1)
+    healthcare_seeking_thresholds <- seq(1, 1, 1)
 
     ### Time to detection based on clinical surveillance
     healthcare_seeking <- generate_healthcare_seeking_time_series(branching_process_output = model_output, population = population)
@@ -109,9 +109,11 @@ if (fresh_run) {
         }) %>%
       ungroup()
     outbreak_detection_healthcare$index <- i
+    red_outbreak_info <- outbreak_info %>% select(outbreak, total_infection_size_with_seeding)
     outbreak_detection_healthcare <- outbreak_detection_healthcare %>%
       left_join(healthcare_seeking_ttd, by = c("threshold", "index")) %>%
       select(index, threshold, healthcare_seeking_outbreak_number, healthcare_seeking_first_day) %>%
+      left_join(red_outbreak_info, by = c("healthcare_seeking_outbreak_number" = "outbreak")) %>%
       mutate(healthcare_seeking_outbreak_number = ifelse(is.na(healthcare_seeking_first_day), NA, healthcare_seeking_outbreak_number))
 
     ## Calculating effective number of individuals shedding over time
@@ -120,7 +122,8 @@ if (fresh_run) {
     ### Time to detection based on wastewater surveillance
     wastewater_shedding_ttd <- tibble(wastewater_shedding_relative_SC2 = wastewater_shedding_relative_SC2,
                                       wastewater_first_day = NA_real_,
-                                      wastewater_outbreak_number = NA_real_)
+                                      wastewater_outbreak_number = NA_real_,
+                                      wastewater_outbreak_size = NA_real_)
     for (j in 1:length(wastewater_shedding_relative_SC2)) {
       wastewater_shedding <- generate_number_shedding_time_series(branching_process_output = model_output,
                                                                   shedding_dist = overall_params$shedding_dist[[i]],
@@ -144,6 +147,9 @@ if (fresh_run) {
         wastewater_outbreak_detect <- wastewater_outbreak_detect %>%
           filter(outbreak == min(outbreak))
         wastewater_shedding_ttd$wastewater_outbreak_number[j] <- wastewater_outbreak_detect$outbreak
+        wastewater_shedding_ttd$wastewater_outbreak_size[j] <- as.numeric(red_outbreak_info %>%
+          filter(outbreak == wastewater_outbreak_detect$outbreak) %>%
+          select(total_infection_size_with_seeding))
       }
     }
     wastewater_shedding_ttd$index <- i
