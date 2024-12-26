@@ -12,7 +12,8 @@ LazyData: true
 Imports:
   distcrete,
   dplyr,
-  EpiSewer
+  EpiSewer,
+  zoo
 Remotes:
   adrian-lison/EpiSewer
 RoxygenNote: 7.3.2
