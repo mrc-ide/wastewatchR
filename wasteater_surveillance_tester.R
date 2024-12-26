@@ -70,8 +70,9 @@ calculate_wastewater_ttd(wastewater_number_shedding_time_series = shedding,
                          sampling_method = "autosampler",
                          detection_approach = "probit_curve",
                          detection_params = list(population = 100000,
-                                                 logistic_beta_0 = -3,
-                                                 logistic_beta_1 = 1,
+                                                 logistic_beta_0 = -1.229996,
+                                                 logistic_beta_1 = 0.258775,
+                                                 limit_of_detection = 3,
                                                  seed = 1000))
 
 calculate_wastewater_ttd(wastewater_number_shedding_time_series = shedding,
