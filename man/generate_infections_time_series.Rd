@@ -16,6 +16,7 @@ Convert stochastic realisation of branching process into number of new infection
 }
 \seealso{
 Other post-processing: 
+\code{\link{extract_outbreak_characteristics_time}()},
 \code{\link{generate_healthcare_seeking_time_series}()},
 \code{\link{generate_number_shedding_time_series}()},
 \code{\link{generate_outbreak_size}()},

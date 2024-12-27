@@ -24,6 +24,7 @@ weighted by the shedding distribution.
 }
 \seealso{
 Other post-processing: 
+\code{\link{extract_outbreak_characteristics_time}()},
 \code{\link{generate_healthcare_seeking_time_series}()},
 \code{\link{generate_infections_time_series}()},
 \code{\link{generate_outbreak_size}()},
