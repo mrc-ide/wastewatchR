@@ -83,8 +83,8 @@ calculate_wastewater_ttd <- function(wastewater_number_shedding_time_series,
   # }
 
   ## Checking that the user has specified a suitable detection type
-  if (!(detection_approach %in% c("threshold", "probit_curve", "per_person_probability"))) {
-    stop("detection_approach must be one of threshold, probit_curve or per_person_probability")
+  if (!(detection_approach %in% c("threshold", "logistic_curve", "per_person_probability"))) {
+    stop("detection_approach must be one of threshold, logistic_curve or per_person_probability")
   }
 
   ## Checking that detection_params is a list
@@ -103,7 +103,7 @@ calculate_wastewater_ttd <- function(wastewater_number_shedding_time_series,
     if (sum(!is.numeric(detection_params$threshold_limits)) > 0) {
       stop("threshold_limits must only contain numerics")
     }
-    wastewater_shedding_ttd <- tibble(threshold = detection_params$threshold_limits) %>%
+    calculated_wastewater_shedding_ttd <- tibble(threshold = detection_params$threshold_limits) %>%
       rowwise() %>%
       mutate(wastewater_first_day = {
         filtered_data <- wastewater_number_shedding_time_series %>%
@@ -145,7 +145,7 @@ calculate_wastewater_ttd <- function(wastewater_number_shedding_time_series,
       dplyr::pull(first_day)
 
     # Return as a tibble with a single row
-    wastewater_shedding_ttd <- tibble(wastewater_first_day = detection_day)
+    calculated_wastewater_shedding_ttd <- tibble(wastewater_first_day = detection_day)
 
   }
 
@@ -178,9 +178,9 @@ calculate_wastewater_ttd <- function(wastewater_number_shedding_time_series,
       dplyr::summarize(first_day = ifelse(n() == 0, NA_real_, min(day))) %>%
       dplyr::pull(first_day)
 
-    wastewater_shedding_ttd <- tibble(wastewater_first_day = detection_day)
+    calculated_wastewater_shedding_ttd <- tibble(wastewater_first_day = detection_day)
   }
 
-  return(wastewater_shedding_ttd)
+  return(calculated_wastewater_shedding_ttd)
 
 }

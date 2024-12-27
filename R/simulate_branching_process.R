@@ -427,7 +427,8 @@ extract_outbreak_characteristics_time <- function(outbreak_info, outbreak_id, id
   # detection, so I'm not worried too much
   if (id_type == "time") {
     single_outbreak_df <- outbreak_info %>%
-      filter(outbreak_start >= outbreak_id)
+      filter(outbreak_end >= outbreak_id)   # still not quite right as sometimes with long shedding profiles the detection belonging to an outbreak
+                                            # in wastewater might be after that outbreak has finished, according to our definition. But probably a fine approximation.
     if (dim(single_outbreak_df)[1] == 0) {
       stop("no outbreak occurs after the time specified")
     } else {
@@ -436,7 +437,7 @@ extract_outbreak_characteristics_time <- function(outbreak_info, outbreak_id, id
     }
   } else if (id_type == "outbreak_number") {
     single_outbreak_df <- outbreak_info %>%
-      filter(outbreak == outbreak_id)
+      filter(outbreak_id == outbreak)
     if (dim(single_outbreak_df)[1] == 0) {
       stop("no outbreak with that id exists")
     }
