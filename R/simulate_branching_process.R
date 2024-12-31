@@ -430,7 +430,7 @@ extract_outbreak_characteristics_time <- function(outbreak_info, outbreak_id, id
       filter(outbreak_end >= outbreak_id)   # still not quite right as sometimes with long shedding profiles the detection belonging to an outbreak
                                             # in wastewater might be after that outbreak has finished, according to our definition. But probably a fine approximation.
     if (dim(single_outbreak_df)[1] == 0) {
-      stop("no outbreak occurs after the time specified")
+      single_outbreak_df <- data.frame(outbreak = NA, total_infection_size_with_seeding = NA)
     } else {
       single_outbreak_df <- single_outbreak_df %>%
         filter(outbreak == min(outbreak))
