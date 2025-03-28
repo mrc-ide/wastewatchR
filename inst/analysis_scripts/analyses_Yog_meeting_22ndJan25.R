@@ -40,6 +40,131 @@ fresh_run <- FALSE
 if (fresh_run) {
 
   # Create cluster
+  num_cores <- parallel::detectCores() - 2 # 4
+  cl <- makeCluster(num_cores)
+  clusterEvalQ(cl, {
+    library(wastewatchR)
+    library(tidyr)
+    library(dplyr)
+  })
+  clusterExport(cl, varlist = c("overall_params", "wastewater_shedding_relative_SC2"))
+
+  # Run branching process
+  results <- pblapply(X = 1:nrow(overall_params), FUN = function(i) {
+
+    ## Running the branching process
+    population <- 100000
+    model_output <- simulate_branching_process(
+
+      ## Parameters relevant to the model outputs in this particular set of analyses
+      initial_mn_offspring = overall_params$R0[i],
+      disp_offspring = 1.0,
+      generation_time_dist = overall_params$Tg[[i]],
+      prob_symptomatic = overall_params$prob_symptomatic[i],
+      infection_to_onset_dist = overall_params$infection_to_onset_dist[[i]],
+      prob_severe =  overall_params$prob_symptomatic[i] / 2,
+      prob_seek_healthcare_non_severe = overall_params$prob_seek_healthcare[i],
+      prob_seek_healthcare_severe = overall_params$prob_seek_healthcare[i],
+      onset_to_healthcare_dist = overall_params$onset_to_healthcare_dist[[i]],
+      annual_spillover_rate = overall_params$annual_spillover_rate[i],
+      spillover_seeding_cases_dist = function() { rpois(1, lambda = 2) },
+      t0 = 0,
+      tf = Inf,
+      population = population,
+      check_final_size = 10000,
+      max_num_outbreaks = 200,
+      initial_immune = 0,
+      seed = overall_params$seed[i],
+
+      ## Not concerned with serology or evolution so these parameters / their outputs aren't used
+      prob_seroconvert_asymptomatic = 1,
+      prob_seroconvert_severe = 1,
+      prob_seroconvert_non_severe = 1,
+      infection_to_seroconversion_dist = function(n) { rep(100, n) },
+      seroconversion_to_seroreversion_dist = function(n) { rep(100, n) },
+      prob_beneficial_mutation = 0,
+      beneficial_mutation_effect_dist = function(n) { rep(0, n) },
+      max_mn_offspring = 10)
+
+    ## Generating information on each of the outbreaks
+    outbreak_info <- generate_outbreak_size(branching_process_output = model_output, population = population)
+
+    ############################
+    # Clinical Surveillance
+    ############################
+
+    # Extracting time to detection based on clinical surveillance and the properties of the outbreak that led to detection
+    ## Note - poss alternative approach to this to consider next time is just find the first person who seeks healthcare
+    ##        in the raw results dataframe, and then get outbreak id from their row etc.
+    healthcare_seeking_time_series <- generate_healthcare_seeking_time_series(branching_process_output = model_output)
+
+    ## Time-to-detection
+    healthcare_seeking_ttd <- tibble(threshold = 1) %>%
+      mutate(
+        healthcare_seeking_first_day = {
+          filtered_data <- healthcare_seeking_time_series %>% filter(incidence_seek_healthcare >= threshold)
+          if (nrow(filtered_data) == 0) NA_real_ else min(filtered_data$day)
+        }) %>%
+      select(healthcare_seeking_first_day)
+
+    ## Outbreak info
+    healthcare_seeking_outbreak_info <- extract_outbreak_characteristics_time(outbreak_info = outbreak_info,
+                                                                              outbreak_id = healthcare_seeking_ttd$healthcare_seeking_first_day,
+                                                                              id_type = "time") %>%
+      select(outbreak, total_infection_size_with_seeding)
+
+    healthcare_seeking_results <- cbind(healthcare_seeking_ttd, healthcare_seeking_outbreak_info) %>%
+      mutate(index = i)
+
+    ############################
+    # Wastewater Surveillance
+    ############################
+
+    ## Creating dataframe to store results for detection based on wastewater surveillance and different shedding amounts
+    wastewater_results <- tibble(wastewater_shedding_relative_SC2 = 10^wastewater_shedding_relative_SC2,
+                                 wastewater_first_day = NA_real_,
+                                 outbreak = NA_real_,
+                                 total_infection_size_with_seeding = NA_real_,
+                                 index = i)
+
+    ## Looping over the different shedding amounts and calculating time-to-detection, extracting outbreak characteristics etc
+    for (j in 1:length(wastewater_shedding_relative_SC2)) {
+
+      ## Generate time-series of effective number of individuals shedding over time
+      wastewater_shedding <- generate_number_shedding_time_series(branching_process_output = model_output,
+                                                                  shedding_dist = overall_params$shedding_dist[[i]],
+                                                                  shedding_relative_SC2 = 10^(wastewater_shedding_relative_SC2[j]))
+
+      ## Calculating time-to-detection for wastewater surveillance
+      temp_wastewater_ttd <- calculate_wastewater_ttd(wastewater_number_shedding_time_series = wastewater_shedding,
+                                                      sampling_frequency = 14,
+                                                      sampling_method = "autosampler",
+                                                      detection_approach = "logistic_curve",
+                                                      detection_params = list(population = 100000,
+                                                                              logistic_beta_0 = -1.229996,
+                                                                              logistic_beta_1 = 0.258775,
+                                                                              limit_of_detection = 0.5,
+                                                                              seed = 1000))
+      wastewater_results$wastewater_first_day[j] <- temp_wastewater_ttd$wastewater_first_day
+
+      ## Outbreak info (only if detection successfully occurs)
+      if (!is.na(temp_wastewater_ttd$wastewater_first_day)) {
+        wastewater_outbreak_info <- extract_outbreak_characteristics_time(outbreak_info = outbreak_info,
+                                                                          outbreak_id = temp_wastewater_ttd$wastewater_first_day,
+                                                                          id_type = "time") %>%
+          select(outbreak, total_infection_size_with_seeding)
+        wastewater_results$outbreak[j] <- wastewater_outbreak_info$outbreak
+        wastewater_results$total_infection_size_with_seeding[j] <- wastewater_outbreak_info$total_infection_size_with_seeding
+      }
+    }
+
+    return(list(wastewater_results = wastewater_results,
+                healthcare_seeking_results = healthcare_seeking_results))
+
+  }, cl = cl)
+  stopCluster(cl)
+  saveRDS(list(results = results,
+               overall_params = overall_params), "inst/temp_results_30thDec2024.rds")
 
 } else {
 
