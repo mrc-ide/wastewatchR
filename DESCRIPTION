@@ -13,7 +13,8 @@ Imports:
   distcrete,
   dplyr,
   EpiSewer,
-  zoo
+  zoo,
+  reshape2
 Remotes:
   adrian-lison/EpiSewer
 RoxygenNote: 7.3.2
