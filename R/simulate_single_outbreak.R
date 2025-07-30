@@ -1,14 +1,62 @@
-#' Generate a realisation of a single outbreak from a stochastic branching process
+#' Generate a realisation of a single outbreak from a stochastic
+#' branching process
 #'
-#' This function species a minimal model for simulating a single outbreak
+#' These functions specify a minimal model for simulating a single outbreak
 #' of an infectious disease following a spillover event.
 #'
 #' This is a minimal set up designed to run quickly and simply and cannot
 #' accommodate dependence of infectees transmissibility on infectors
 #' characteristics (e.g. mutations --> changes in R0)
 #'
-#' This function creates a named list containing the output of simulating a stochastic branching
-#' process.
+#' This function simulates a branching process
+#'
+#' @param mn_offspring The mean of the offspring distribution (R0)
+#' @param disp_offspring The overdisperion of the offspring distribution. Must be >= 1. When set to 1, equivalent to a Poisson distribution; >1 is a Negative Binomial distribution.
+#' @param max_gen The maximum number of generations of transmission to simulate - default is Inf but with mn_offspring <1 transmission dies out eventually.
+#' @param index_cases The number of initial seeding cases associated with the zoonotic spillover.
+#' @param initial_immune The proportion of the population initially immune.
+#'
+#' @family simulation
+#' @export
+sim_minimal <- function(mn_offspring = 0.90,
+                        disp_offspring = 1,
+                        max_gen = Inf,
+                        index_cases = 1,
+                        initial_immune){
+
+  Z <- list()
+  Z[[1]] <- index_cases
+  i <- 1
+
+  if (disp_offspring <= 1.0) {
+
+    while(sum(Z[[i]]) > 0 && i <= max_gen) {
+      Z[[i+1]] <- rpois(n = sum(Z[[i]]),
+                        lambda = mn_offspring)
+      i <- i+1
+    }
+
+  } else {
+
+    while(sum(Z[[i]]) > 0 && i <= gens) {
+
+      Z[[i+1]] <- rnbinom(n = sum(Z[[i]]),
+                          size =  initial_immune *
+                            mn_offspring/(disp_offspring - 1),
+                          mu = mn_offspring)
+      i <- i+1
+
+    }
+  }
+
+  return(Z)
+
+}
+
+#' This function takes the branching process output of sim_minimal and creates
+#' a dataframe with 1 row per infected individual with assigned clinical
+#' characteristics based on specified probability distributions.
+#'
 #' @param mn_offspring The mean of the offspring distribution (R0)
 #' @param disp_offspring The overdisperion of the offspring distribution. Must be >= 1. When set to 1, equivalent to a Poisson distribution; >1 is a Negative Binomial distribution.
 #' @param max_gen The maximum number of generations of transmission to simulate - default is Inf but with mn_offspring <1 transmission dies out eventually.
@@ -23,7 +71,6 @@
 #' @param prob_diagnosis The probability of diagnosis given healthcare sought. Note this is not modeled as being dependent on severity, beyond the difference in probability of seeking care.
 #' @param healthcare_to_diagnosis_dist The distribution of time from healthcare seeking to diagnosis
 #' @param initial_immune The proportion of the population initially immune.
-#'
 #'
 #' @family simulation
 #' @export
@@ -47,47 +94,22 @@
                        { rgamma(n, shape = 6, rate = 2) },
                      initial_immune = 1,
                       ...){
+
   #-----------------------------------------------------------------------------
   # simulate branching process -------------------------------------------------
 
-    sim_minimal <- function(mn_offspring = 0.90,
-                            disp_offspring = 1,
-                            max_gen = Inf,
-                            index_cases = 1){
+    bp <- sim_minimal(mn_offspring = mn_offspring,
+                      disp_offspring = disp_offspring,
+                      max_gen = max_gen,
+                      index_cases = index_cases,
+                      initial_immune = initial_immune)
 
-      Z <- list()
-      Z[[1]] <- index_cases
-      i <- 1
-
-      if (disp_offspring <= 1.0) {
-
-        while(sum(Z[[i]]) > 0 && i <= max_gen) {
-          Z[[i+1]] <- rpois(n = sum(Z[[i]]),
-                            lambda = mn_offspring)
-          i <- i+1
-        }
-
-      } else {
-
-        while(sum(Z[[i]]) > 0 && i <= gens) {
-
-          Z[[i+1]] <- rnbinom(n = sum(Z[[i]]),
-                              size =  initial_immune *
-                                mn_offspring/(disp_offspring - 1),
-                              mu = mn_offspring)
-          i <- i+1
-
-        }
-      }
-
-      return(Z)
-
-    }
 
   #-----------------------------------------------------------------------------
-  # reformat output into data frame with 1 row per infected individual ---------
+  # format output of sim_minimal into dataframe w/ 1 row per infected individual
 
-  tmp <- melt(Z)%>%
+
+    tmp <- melt(bp)%>%
     mutate(number = 1, # number for counting generation size
            infection_generation = L1-1)%>% # -spillover, index case gen 1
     filter(infection_generation>=1)%>%
