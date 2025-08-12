@@ -65,18 +65,9 @@ calculate_wastewater_ttd <- function(wastewater_number_shedding_time_series,
     stop("sampling_frequency must be greater than or equal to 1 (corresponding to daily sampling)")
   }
 
-  ## Checking that the user has specified a suitable smpling method
+  ## Checking that the user has specified a suitable sampling method
   if (!(sampling_method %in% c("autosampler", "grab", "moore_swab"))) {
     stop("Error - sampling_method must be one of autosampler, grab or moore_swab")
-  }
-  if (sampling_method == "moore_swab") {
-    wastewater_number_shedding_time_series <- wastewater_number_shedding_time_series %>%
-      ungroup() %>%
-      mutate(shedding_value = rollapply(data = shedding_value,
-                                        width = 7,
-                                        FUN = mean,
-                                        align = "right",
-                                        partial = TRUE))
   }
   # if (sampling_method %in% c("autosampler", "grab")) {
   #   warning("Note that as we don't do sub-daily time-resolution atm, there is no difference in our approach to representing autosampling and grab")
@@ -90,6 +81,22 @@ calculate_wastewater_ttd <- function(wastewater_number_shedding_time_series,
   ## Checking that detection_params is a list
   if (!is.list(detection_params)) {
     stop("detection_params must be a list containing detection_approach-specific parameters")
+  }
+
+  ## Checking that duration is speciifed if the user has selected moore_swab as sampling_method
+  if (sampling_method == "more_swab" ){
+    stop("if sampling method is moore_swab,'detection_params$duration' must be a number of days")
+  }
+
+  ## If sampling method = moore_swab, calculate mean shedding over moore swab window
+  if (sampling_method == "moore_swab") {
+    wastewater_number_shedding_time_series <- wastewater_number_shedding_time_series %>%
+      ungroup() %>%
+      mutate(shedding_value = rollapply(data = shedding_value,
+                                        width = detection_params$duration,
+                                        FUN = mean,
+                                        align = "right",
+                                        partial = TRUE))
   }
 
   ## For detection_approach == "threshold", ttd is the first time at which the effective number
@@ -120,7 +127,7 @@ calculate_wastewater_ttd <- function(wastewater_number_shedding_time_series,
 
     # Check that the necessary logistic parameters exist
     if (!all(c("logistic_beta_0", "logistic_beta_1", "seed", "limit_of_detection", "population") %in% names(detection_params))) {
-      stop("For detection_approach == 'logistic_curve', detection_params must contain logistic_beta_0, logistic_beta_1, limit_of_detection and a seed")
+      stop("For detection_approach == 'logistic_curve', detection_params must contain logistic_beta_0, logistic_beta_1, limit_of_detection, population, and a seed")
     }
 
     # Filter to the sampling days
@@ -128,12 +135,12 @@ calculate_wastewater_ttd <- function(wastewater_number_shedding_time_series,
     sampled_data <- wastewater_number_shedding_time_series %>%
       filter(day %% sampling_frequency == 0) %>%
       mutate(
-        # Convert 'shedding_value' to a probability of detection via probit
+        # Convert 'shedding_value' to a probability of detection via logistic curve
         prob_detect = ifelse(shedding_value < detection_params$limit_of_detection, 0,
                              plogis(
-                               detection_params$logistic_beta_0 +     # -1.229996 from Hewitt et al Fig 5B
-                               detection_params$logistic_beta_1 *     # 0.258775 from Hewitt et al Fig 5B
-                                  (100000 * shedding_value / detection_params$population))),
+                               detection_params$logistic_beta_0 +     # -1.229996 from Hewitt et al Fig 5B for Model 3
+                               detection_params$logistic_beta_1 *     # 0.258775 from Hewitt et al Fig 5B for Model 3
+                                  (100000 * shedding_value / detection_params$population))), # 100000 = population used by Hewitt et. al.
         # Draw once from a Bernoulli with this probability
         detect_draw = rbinom(n = n(), size = 1, prob = prob_detect))
 
