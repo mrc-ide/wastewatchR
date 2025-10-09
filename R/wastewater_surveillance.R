@@ -124,6 +124,10 @@ calculate_wastewater_ttd <- function(wastewater_number_shedding_time_series,
                                         partial = TRUE))
   }
 
+  ## To ensure first date of sampling is random with respect to the beginning of an outbreak
+  ## set a random nudge >=0 and < sampling_frequency
+  x <- sample(0:(sampling_frequency-1), 1)
+
   ## For detection_approach == "threshold", ttd is the first time at which the effective number
   ## of shedding individuals eclipses said threshold
   ## NOTE - we do not currently output probability of detection at the population level as this approach does not lend itself to this as prob is either 1 or 0
@@ -140,7 +144,7 @@ calculate_wastewater_ttd <- function(wastewater_number_shedding_time_series,
       rowwise() %>%
       mutate(wastewater_first_day = {
         filtered_data <- wastewater_number_shedding_time_series %>%
-          filter(day %% sampling_frequency == 0) %>%
+          filter(day-x %% sampling_frequency == 0) %>%
           filter((100000 * shedding_value / detection_params$population) >= threshold)
         if (nrow(filtered_data) == 0) NA_real_ else min(filtered_data$day)
       }) %>%
@@ -168,8 +172,8 @@ calculate_wastewater_ttd <- function(wastewater_number_shedding_time_series,
                                detection_params$logistic_beta_0 +     # -1.229996 from Hewitt et al Fig 5B for Model 3
                                detection_params$logistic_beta_1 *     # 0.258775 from Hewitt et al Fig 5B for Model 3
                                   (100000 * shedding_value / detection_params$population))), # 100000 = population used by Hewitt et. al.
-        sampled = ifelse(day %% sampling_frequency == 0, "Yes", "No"),
-        detect_draw = ifelse(day %% sampling_frequency == 0, rbinom(n = n(), size = 1, prob = prob_detect), 0))# Draw once from a Bernoulli with this probability
+        sampled = ifelse(day-x %% sampling_frequency == 0, "Yes", "No"),
+        detect_draw = ifelse(day-x %% sampling_frequency == 0, rbinom(n = n(), size = 1, prob = prob_detect), 0))# Draw once from a Bernoulli with this probability
 
     # The time-to-detection is the first sampled day at which detect_draw == 1
     detection_day <- sampled_data %>%
@@ -196,7 +200,7 @@ calculate_wastewater_ttd <- function(wastewater_number_shedding_time_series,
 
     # Filter by sampling frequency
     sampled_data <- wastewater_number_shedding_time_series %>%
-      filter(day %% sampling_frequency == 0) %>%
+      filter(day-x %% sampling_frequency == 0) %>%
       mutate(
         detect_draw = rbinom(
           n = n(),
