@@ -38,7 +38,7 @@ sim_minimal <- function(mn_offspring = 0.90,
 
   } else {
 
-    while(sum(Z[[i]]) > 0 && i <= gens) {
+    while(sum(Z[[i]]) > 0 && i <= max_gen) {
 
       Z[[i+1]] <- rnbinom(n = sum(Z[[i]]),
                           size =  initial_immune *
@@ -57,6 +57,8 @@ sim_minimal <- function(mn_offspring = 0.90,
 #' a dataframe with 1 row per infected individual with assigned clinical
 #' characteristics based on specified probability distributions.
 #'
+#' @param spillover_day time that spillover occurred (taken from output of spillover function)
+#' @param index_case_ID ID of the index case (the spillover)
 #' @param mn_offspring The mean of the offspring distribution (R0)
 #' @param disp_offspring The overdisperion of the offspring distribution. Must be >= 1. When set to 1, equivalent to a Poisson distribution; >1 is a Negative Binomial distribution.
 #' @param max_gen The maximum number of generations of transmission to simulate - default is Inf but with mn_offspring <1 transmission dies out eventually.
@@ -75,7 +77,9 @@ sim_minimal <- function(mn_offspring = 0.90,
 #' @family simulation
 #' @export
 
-  sim_single_outbreak <- function(mn_offspring = 0.90,
+  sim_single_outbreak <- function(spillover_day,
+                                  index_case_ID,
+                                  mn_offspring = 0.90,
                      disp_offspring = 1,
                      max_gen = Inf,
                      index_cases = 1,
@@ -108,10 +112,9 @@ sim_minimal <- function(mn_offspring = 0.90,
   #-----------------------------------------------------------------------------
   # format output of sim_minimal into dataframe w/ 1 row per infected individual
 
-
     tmp <- melt(bp)%>%
     mutate(number = 1, # number for counting generation size
-           infection_generation = L1-1)%>% # -spillover, index case gen 1
+           infection_generation = L1-1)%>% # index case gen 1
     filter(infection_generation>=1)%>%
     rename(n_offspring = value)%>%
     group_by(infection_generation)%>%
@@ -121,11 +124,11 @@ sim_minimal <- function(mn_offspring = 0.90,
     mutate(id = paste0(infection_generation, "-", node))
 
   ## look up infectors
-  tmp$infector <- NA
+  tmp$infector <- "animal"
 
-  if(dim(tmp)[1]>index_cases){
+  if(dim(tmp)[1]>=index_cases+1){
     tmp$infector[(index_cases + 1):dim(tmp)[1]] <- tmp%>% uncount(n_offspring) %>%
-      pull(id)
+      pull(id)}
 
   ## order more intuitively
   tmp <- tmp %>%
@@ -136,7 +139,7 @@ sim_minimal <- function(mn_offspring = 0.90,
   # assign characteristics (symptoms & healthcare seeking) ---------------------
 
   tmp <- tmp %>%
-    mutate(time_inf_rel = if_else(is.na(infector), 0,
+    mutate(time_inf_rel = if_else(infector == "animal", 0,
                                   generation_time_dist(nrow(.))),
            symptomatic = sample(c(0, 1), nrow(.),
                                 replace = TRUE,
@@ -170,32 +173,34 @@ sim_minimal <- function(mn_offspring = 0.90,
 
 
   #-----------------------------------------------------------------------------
-  # anchor to time. Note the first spillover defines time = 0 ------------------
+  # anchor to time. Note the day of spillover replaces time = 0 ----------------
+
+  tmp$time_infection <- spillover_day
 
   ## time_infection = time_infection of infector + generation time
 
+if(dim(tmp)[1]>index_cases+1){
   infectors <- unique(tmp$infector)
-  tmp$time_infection <- 0
-
   tmp2 <- vector(mode = "list", length = length(infectors))
-  tmp2[[1]] <- tmp %>% filter(is.na(infector))
+  tmp2[[1]] <- tmp %>% filter(infector == "animal")
   tmp3 <- bind_rows(tmp2)
 
-  for(i in 2:length(infectors)){
+  for(i in 2:(dim(tmp)[1])){
     tmp2[[i]] <- tmp %>% filter(infector == infectors[i]) %>%
       mutate(time_infection = tmp3 %>%
                filter(id == infectors[i]) %>%
                pull(time_infection) + time_inf_rel)
     tmp3 <- bind_rows(tmp2)
   }
+  tmp <- tmp3
+}
 
-  linelist <- tmp3 %>%
+
+  linelist <- tmp %>%
     mutate(time_symptom_onset = time_infection + infection_to_onset) %>%
     mutate(time_seek_healthcare = time_symptom_onset + onset_to_healthcare)%>%
-    mutate(time_diagnosis = time_seek_healthcare + healthcare_to_diagnosis)
-  } else {
-    linelist = "no h-2-h transmission"
-  }
+    mutate(time_diagnosis = time_seek_healthcare + healthcare_to_diagnosis)%>%
+    mutate(spillover_ID = index_case_ID)
 
   return(linelist) }
 
