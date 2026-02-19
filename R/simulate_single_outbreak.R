@@ -41,7 +41,7 @@ sim_minimal <- function(mn_offspring = 0.90,
     while(sum(Z[[i]]) > 0 && i <= max_gen) {
 
       Z[[i+1]] <- rnbinom(n = sum(Z[[i]]),
-                          size =  initial_immune *
+                          size =  (1 - initial_immune) *
                             mn_offspring/(disp_offspring - 1),
                           mu = mn_offspring)
       i <- i+1
