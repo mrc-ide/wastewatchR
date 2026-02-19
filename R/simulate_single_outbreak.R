@@ -11,7 +11,7 @@
 #' This function simulates a branching process
 #'
 #' @param mn_offspring The mean of the offspring distribution (R0)
-#' @param disp_offspring The overdisperion of the offspring distribution. Must be >= 1. When set to 1, equivalent to a Poisson distribution; >1 is a Negative Binomial distribution.
+#' @param disp_offspring The overdispersion of the offspring distribution. Must be >= 1. When set to 1, equivalent to a Poisson distribution; >1 is a Negative Binomial distribution.
 #' @param max_gen The maximum number of generations of transmission to simulate - default is Inf but with mn_offspring <1 transmission dies out eventually.
 #' @param index_cases The number of initial seeding cases associated with the zoonotic spillover.
 #' @param initial_immune The proportion of the population initially immune.
@@ -32,7 +32,7 @@ sim_minimal <- function(mn_offspring = 0.90,
 
     while(sum(Z[[i]]) > 0 && i <= max_gen) {
       Z[[i+1]] <- rpois(n = sum(Z[[i]]),
-                        lambda = mn_offspring)
+                        lambda = mn_offspring * (1 - initial_immune))
       i <- i+1
     }
 
