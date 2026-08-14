@@ -109,5 +109,5 @@ calculate_clinical_detection_prob <- function(nts,
   det$sampled_data$prob_detection_clinical <- 1 - exp(log_prob_none)
 
 
-  return(det)
+  return(det$sampled_data)
 }
