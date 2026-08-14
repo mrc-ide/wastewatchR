@@ -4,9 +4,10 @@
 #' These functions specify a minimal model for simulating a single outbreak
 #' of an infectious disease following a spillover event.
 #'
-#' This is a minimal set up designed to run quickly and simply and cannot
-#' accommodate dependence of infectees transmissibility on infectors
-#' characteristics (e.g. mutations --> changes in R0)
+#' This version of the outbreak simulater is designed to run quickly and simply
+#' and cannot accommodate dependence of infectees characteristics on infectors
+#' characteristics (e.g. mutations --> changes in R0, or decreases in R0 based on
+#' decreases in the proportion of the population susceptible over time)
 #'
 #' This function simulates a branching process
 #'
@@ -54,8 +55,8 @@ sim_minimal <- function(mn_offspring = 0.90,
 }
 
 #' This function takes the branching process output of sim_minimal and creates
-#' a dataframe with 1 row per infected individual with assigned clinical
-#' characteristics based on specified probability distributions.
+#' a linelist consisting of a dataframe with 1 row per infected individual with
+#' assigned clinical characteristics based on specified probability distributions.
 #'
 #' @param spillover_day time that spillover occurred (taken from output of spillover function)
 #' @param index_case_ID ID of the index case (the spillover)
@@ -173,27 +174,30 @@ sim_minimal <- function(mn_offspring = 0.90,
 
 
   #-----------------------------------------------------------------------------
-  # anchor to time. Note the day of spillover replaces time = 0 ----------------
+  # anchor to time. Note the day of the spillover that initiated the outbreak
+  # replaces time = 0. If using this as a stand-alone function outside of the
+  # wrapper, spillover_day can be set as zero or loaded from column "t" of the
+  # dataframe output of the "spillover" function.
 
   tmp$time_infection <- spillover_day
 
   ## time_infection = time_infection of infector + generation time
 
-if(dim(tmp)[1]>index_cases+1){
-  infectors <- unique(tmp$infector)
-  tmp2 <- vector(mode = "list", length = length(infectors))
-  tmp2[[1]] <- tmp %>% filter(infector == "animal")
-  tmp3 <- bind_rows(tmp2)
-
-  for(i in 2:(dim(tmp)[1])){
-    tmp2[[i]] <- tmp %>% filter(infector == infectors[i]) %>%
-      mutate(time_infection = tmp3 %>%
-               filter(id == infectors[i]) %>%
-               pull(time_infection) + time_inf_rel)
+  if(dim(tmp)[1]>index_cases+1){
+    infectors <- unique(tmp$infector)
+    tmp2 <- vector(mode = "list", length = length(infectors))
+    tmp2[[1]] <- tmp %>% filter(infector == "animal")
     tmp3 <- bind_rows(tmp2)
+
+    for(i in 2:(dim(tmp)[1])){
+      tmp2[[i]] <- tmp %>% filter(infector == infectors[i]) %>%
+        mutate(time_infection = tmp3 %>%
+                 filter(id == infectors[i]) %>%
+                 pull(time_infection) + time_inf_rel)
+      tmp3 <- bind_rows(tmp2)
+    }
+    tmp <- tmp3
   }
-  tmp <- tmp3
-}
 
 
   linelist <- tmp %>%

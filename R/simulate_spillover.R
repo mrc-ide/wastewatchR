@@ -12,7 +12,8 @@
 
 circular_dist <- function(t, tmax, P = 365) {
 
-  # Needed to make the Gaussian periodic (to wrap back around each year)
+  # support function needed to make the Gaussian periodic
+  # (to wrap back around each year)
   # Returns the shortest signed distance in range -P/2 to P/2
   dist <- (t - tmax + P/2) %% P - P/2
   return(dist)
@@ -38,31 +39,17 @@ gaussian_mean <- function(tmax, P = 365, sigma = 30){
 
 solve_b <- function(x, d, tmax, P = 365, sigma = 30){
 
+  # this function gives you the value of b that corresponds to a desired rate
+  # of spillover, for a given d and tmax
+
   gbar <- gaussian_mean(tmax, P, sigma)
 
   b <- x / (1 + d * gbar)
   b
 }
 
-pulse_forcing <- function(t, baseline, n_pulses = 5,
-                          pulse_height = 5, pulse_width = 10) {
 
-  rate <- rep(baseline, length(t))
-
-  pulse_times <- sample(t, n_pulses)
-
-  for (tp in pulse_times) {
-
-    rate <- rate +
-      pulse_height *
-      exp(-(t - tp)^2 / (2 * pulse_width^2))
-
-  }
-
-  rate
-}
-
-#' Bringing these together with time
+#' Simulating spillovers over time
 #' @param time The time period you would like to run the model over (days)
 #' @param specify The parameters you would like to specify: either "spillover_rate" to specify spillover rate itself  OR "swiss_cheese" to specify factors contributing to spillover rate (prevalence in animals, contact rate between animals and humans, and probability of infection upon contact)
 #' Used if specify == "spillover_rate"
