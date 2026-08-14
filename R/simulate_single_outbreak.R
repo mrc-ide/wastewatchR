@@ -22,7 +22,7 @@ sim_minimal <- function(mn_offspring = 0.90,
                         disp_offspring = 1,
                         max_gen = Inf,
                         index_cases = 1,
-                        initial_immune){
+                        initial_immune = 0){
 
   Z <- list()
   Z[[1]] <- index_cases
@@ -96,7 +96,7 @@ sim_minimal <- function(mn_offspring = 0.90,
                      prob_diagnosis = 0.8,
                      healthcare_to_diagnosis_dist = function(n)
                        { rgamma(n, shape = 6, rate = 2) },
-                     initial_immune = 1,
+                     initial_immune = 0,
                       ...){
 
   #-----------------------------------------------------------------------------
