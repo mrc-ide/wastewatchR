@@ -37,6 +37,20 @@ gaussian_mean <- function(tmax, P = 365, sigma = 30){
   mean(exp(-(dist^2) / (2 * sigma^2)))
 }
 
+#' Calculate the baseline rate
+#'
+#' Calculates the baseline rate `b` required to achieve a specified
+#' mean spillover rate given the seasonal forcing parameters.
+#'
+#' @param x Desired mean spillover rate.
+#' @param d Seasonal forcing amplitude.
+#' @param tmax Day of the year at which seasonal forcing peaks.
+#' @param P Period of seasonality in days.
+#' @param sigma Spread of the seasonal peak.
+#'
+#' @return The baseline rate `b`.
+#'
+#' @export
 solve_b <- function(x, d, tmax, P = 365, sigma = 30){
 
   # this function gives you the value of b that corresponds to a desired rate
