@@ -126,7 +126,7 @@ calculate_wastewater_ttd <- function(wastewater_number_shedding_time_series,
 
   ## To ensure first date of sampling is random with respect to the beginning of an outbreak
   ## set a random nudge >=0 and < sampling_frequency
-  x <- sample(0:(sampling_frequency-1), 1)
+  x <- sample(1:(sampling_frequency-1), 1)
 
   ## For detection_approach == "threshold", ttd is the first time at which the effective number
   ## of shedding individuals eclipses said threshold
@@ -171,9 +171,9 @@ calculate_wastewater_ttd <- function(wastewater_number_shedding_time_series,
                              plogis(
                                detection_params$logistic_beta_0 +     # -1.229996 from Hewitt et al Fig 5B for Model 3
                                detection_params$logistic_beta_1 *     # 0.258775 from Hewitt et al Fig 5B for Model 3
-                                  (100000 * shedding_value / detection_params$population))), # 100000 = population used by Hewitt et. al.
-        sampled = ifelse(day-x %% sampling_frequency == 0, "Yes", "No"),
-        detect_draw = ifelse(day-x %% sampling_frequency == 0, rbinom(n = n(), size = 1, prob = prob_detect), 0))# Draw once from a Bernoulli with this probability
+                                  (log10(100000 * (shedding_value+1e-3) / detection_params$population)))), # 100000 = population used by Hewitt et. al.
+        sampled = ifelse((day-x) %% sampling_frequency == 0, "Yes", "No"),
+        detect_draw = ifelse((day-x) %% sampling_frequency == 0, rbinom(n = n(), size = 1, prob = prob_detect), 0))# Draw once from a Bernoulli with this probability
 
     # The time-to-detection is the first sampled day at which detect_draw == 1
     detection_day <- sampled_data %>%
