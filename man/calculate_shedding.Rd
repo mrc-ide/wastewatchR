@@ -4,15 +4,26 @@
 \alias{calculate_shedding}
 \title{Utility function to calculate shedding given infection time-series and shedding distribution}
 \usage{
-calculate_shedding(day, infection_counts, shedding_dist, shedding_relative_SC2)
+calculate_shedding(
+  day,
+  infection_counts,
+  method,
+  shedding_dist,
+  duration,
+  shedding_relative_SC2
+)
 }
 \arguments{
 \item{day}{The day being considered}
 
 \item{infection_counts}{A time series of the number of individuals infected on each day}
 
+\item{method}{The method to use - either "effective_n_shedders" to use the effective number of shedders based on the shedding profile "shedding_dist" (see below) (equivalent to Hewitt Model 3) or "n_shedders" to use the number of shedders (equivalent to Hewitt Model 2) on any one day}
+
 \item{shedding_dist}{The distribution of amount shed over time following infection, normalised so the amount of shedding on the day
-with the maximum amount is 1.}
+with the maximum amount is 1. Used if method = "effective_n_shedders"}
+
+\item{duration}{duration of shedding, if method = "n_shedders". Should be NA if using shedding_dist}
 
 \item{shedding_relative_SC2}{Amount of shedding that occurs relative to SARS-CoV-2 (required given our pinning to the SC2 data from Hewitt et al)}
 }

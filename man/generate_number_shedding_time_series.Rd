@@ -7,7 +7,9 @@
 generate_number_shedding_time_series(
   branching_process_output,
   shedding_dist,
-  shedding_relative_SC2
+  shedding_relative_SC2,
+  method,
+  duration
 )
 }
 \arguments{
@@ -17,6 +19,10 @@ generate_number_shedding_time_series(
 with the maximum amount is 1.}
 
 \item{shedding_relative_SC2}{Amount of shedding that occurs relative to SARS-CoV-2 (required given our pinning to the SC2 data from Hewitt et al)}
+
+\item{method}{The method to use - either "effective_n_shedders" to use the effective number of shedders based on the shedding profile "shedding_dist" (equivalent to Hewitt Model 3) or "n_shedders" to use the number of shedders (equivalent to Hewitt Model 2) on any one day}
+
+\item{duration}{duration of shedding, if method = "n_shedders". Should be NA if using shedding_dist}
 }
 \description{
 This function converts a branching process output into time-series of number shedding,

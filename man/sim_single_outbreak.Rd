@@ -2,9 +2,13 @@
 % Please edit documentation in R/simulate_single_outbreak.R
 \name{sim_single_outbreak}
 \alias{sim_single_outbreak}
-\title{Generate a realisation of a single outbreak from a stochastic branching process}
+\title{This function takes the branching process output of sim_minimal and creates
+a linelist consisting of a dataframe with 1 row per infected individual with
+assigned clinical characteristics based on specified probability distributions.}
 \usage{
 sim_single_outbreak(
+  spillover_day,
+  index_case_ID,
   mn_offspring = 0.9,
   disp_offspring = 1,
   max_gen = Inf,
@@ -26,11 +30,15 @@ sim_single_outbreak(
   healthcare_to_diagnosis_dist = function(n) {
      rgamma(n, shape = 6, rate = 2)
  },
-  initial_immune = 1,
+  initial_immune = 0,
   ...
 )
 }
 \arguments{
+\item{spillover_day}{time that spillover occurred (taken from output of spillover function)}
+
+\item{index_case_ID}{ID of the index case (the spillover)}
+
 \item{mn_offspring}{The mean of the offspring distribution (R0)}
 
 \item{disp_offspring}{The overdisperion of the offspring distribution. Must be >= 1. When set to 1, equivalent to a Poisson distribution; >1 is a Negative Binomial distribution.}
@@ -60,19 +68,14 @@ sim_single_outbreak(
 \item{initial_immune}{The proportion of the population initially immune.}
 }
 \description{
-This function species a minimal model for simulating a single outbreak
-of an infectious disease following a spillover event.
-}
-\details{
-This is a minimal set up designed to run quickly and simply and cannot
-accommodate dependence of infectees transmissibility on infectors
-characteristics (e.g. mutations --> changes in R0)
-
-This function creates a named list containing the output of simulating a stochastic branching
-process.
+This function takes the branching process output of sim_minimal and creates
+a linelist consisting of a dataframe with 1 row per infected individual with
+assigned clinical characteristics based on specified probability distributions.
 }
 \seealso{
 Other simulation: 
-\code{\link{simulate_branching_process}()}
+\code{\link{sim_minimal}()},
+\code{\link{simulate_branching_process}()},
+\code{\link{spillover}()}
 }
 \concept{simulation}
