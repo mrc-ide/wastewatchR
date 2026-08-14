@@ -20,12 +20,46 @@ circular_dist <- function(t, tmax, P = 365) {
 
 gaussian_forcing <- function(t, tmax, P = 365, b = 0, d = 0, sigma = 30) {
 
-  # Where t is the day and tmax is the peak (between 0-365)
+  # Where t is the day and tmax is the peak (between 0-P)
   dist <- circular_dist(t, tmax, P)
 
   # Gaussian seasonal forcing form
   f <- b * (1 + d * exp(- (dist)^2 / (2 * sigma^2)))
   return(f)
+}
+
+gaussian_mean <- function(tmax, P = 365, sigma = 30){
+
+  t <- 1:P
+  dist <- circular_dist(t, tmax, P)
+
+  mean(exp(-(dist^2) / (2 * sigma^2)))
+}
+
+solve_b <- function(x, d, tmax, P = 365, sigma = 30){
+
+  gbar <- gaussian_mean(tmax, P, sigma)
+
+  b <- x / (1 + d * gbar)
+  b
+}
+
+pulse_forcing <- function(t, baseline, n_pulses = 5,
+                          pulse_height = 5, pulse_width = 10) {
+
+  rate <- rep(baseline, length(t))
+
+  pulse_times <- sample(t, n_pulses)
+
+  for (tp in pulse_times) {
+
+    rate <- rate +
+      pulse_height *
+      exp(-(t - tp)^2 / (2 * pulse_width^2))
+
+  }
+
+  rate
 }
 
 #' Bringing these together with time
