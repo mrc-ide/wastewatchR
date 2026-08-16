@@ -144,7 +144,7 @@ calculate_wastewater_ttd <- function(wastewater_number_shedding_time_series,
       rowwise() %>%
       mutate(wastewater_first_day = {
         filtered_data <- wastewater_number_shedding_time_series %>%
-          filter(day-x %% sampling_frequency == 0) %>%
+          filter((day-x) %% sampling_frequency == 0) %>%
           filter((100000 * shedding_value / detection_params$population) >= threshold)
         if (nrow(filtered_data) == 0) NA_real_ else min(filtered_data$day)
       }) %>%
