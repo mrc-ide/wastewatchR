@@ -126,7 +126,11 @@ calculate_wastewater_ttd <- function(wastewater_number_shedding_time_series,
 
   ## To ensure first date of sampling is random with respect to the beginning of an outbreak
   ## set a random nudge >=0 and < sampling_frequency
-  x <- sample(1:(sampling_frequency-1), 1)
+  x <- if (sampling_frequency == 1) { # ensuring daily sampling (sampling_frequency == 1) starts on day 0
+    0
+  } else {
+    sample(0:(sampling_frequency - 1), 1)
+  }
 
   ## For detection_approach == "threshold", ttd is the first time at which the effective number
   ## of shedding individuals eclipses said threshold
