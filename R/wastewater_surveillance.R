@@ -126,6 +126,8 @@ calculate_wastewater_ttd <- function(wastewater_number_shedding_time_series,
 
   ## To ensure first date of sampling is random with respect to the beginning of an outbreak
   ## set a random nudge >=0 and < sampling_frequency
+  set.seed(detection_params$seed)
+
   x <- if (sampling_frequency == 1) { # ensuring daily sampling (sampling_frequency == 1) starts on day 0
     0
   } else {
@@ -167,7 +169,6 @@ calculate_wastewater_ttd <- function(wastewater_number_shedding_time_series,
     }
 
     # Filter to the sampling days
-    set.seed(detection_params$seed)
     sampled_data <- wastewater_number_shedding_time_series %>%
       mutate(
         # Convert 'shedding_value' to a probability of detection via logistic curve
