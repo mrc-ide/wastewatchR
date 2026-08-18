@@ -29,22 +29,30 @@ sim_minimal <- function(mn_offspring = 0.90,
   Z[[1]] <- index_cases
   i <- 1
 
+  # Effective reproduction number
+  Re <- mn_offspring * (1 - initial_immune)
+
   if (disp_offspring <= 1.0) {
 
     while(sum(Z[[i]]) > 0 && i <= max_gen) {
-      Z[[i+1]] <- rpois(n = sum(Z[[i]]),
-                        lambda = mn_offspring * (1 - initial_immune))
+      Z[[i+1]] <- rpois(
+        n = sum(Z[[i]]),
+        lambda = Re
+        )
+
       i <- i+1
+
     }
 
   } else {
 
     while(sum(Z[[i]]) > 0 && i <= max_gen) {
 
-      Z[[i+1]] <- rnbinom(n = sum(Z[[i]]),
-                          size =  (1 - initial_immune) *
-                            mn_offspring/(disp_offspring - 1),
-                          mu = mn_offspring)
+      Z[[i+1]] <- rnbinom(
+        n = sum(Z[[i]]),
+        size = Re/(disp_offspring - 1),
+        mu = Re)
+
       i <- i+1
 
     }
@@ -109,7 +117,7 @@ sim_minimal <- function(mn_offspring = 0.90,
                       index_cases = index_cases,
                       initial_immune = initial_immune)
 
-
+bp
   #-----------------------------------------------------------------------------
   # format output of sim_minimal into dataframe w/ 1 row per infected individual
 
@@ -183,7 +191,7 @@ sim_minimal <- function(mn_offspring = 0.90,
 
   ## time_infection = time_infection of infector + generation time
 
-  if(dim(tmp)[1]>index_cases+1){
+  if(dim(tmp)[1]>=index_cases+1){
     infectors <- unique(tmp$infector)
     tmp2 <- vector(mode = "list", length = length(infectors))
     tmp2[[1]] <- tmp %>% filter(infector == "animal")
