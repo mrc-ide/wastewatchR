@@ -174,8 +174,8 @@ calculate_wastewater_ttd <- function(wastewater_number_shedding_time_series,
         # Convert 'shedding_value' to a probability of detection via logistic curve
         prob_detect = ifelse(shedding_value < detection_params$limit_of_detection, 0,
                              plogis(
-                               detection_params$logistic_beta_0 +     # -1.229996 from Hewitt et al Fig 5B for Model 3
-                               detection_params$logistic_beta_1 *     # 0.258775 from Hewitt et al Fig 5B for Model 3
+                               detection_params$logistic_beta_0 +
+                               detection_params$logistic_beta_1 *
                                   (log10(100000 * (shedding_value+1e-3) / detection_params$population)))), # 100000 = population used by Hewitt et. al.
         sampled = ifelse((day-x) %% sampling_frequency == 0, "Yes", "No"),
         detect_draw = ifelse((day-x) %% sampling_frequency == 0, rbinom(n = n(), size = 1, prob = prob_detect), 0))# Draw once from a Bernoulli with this probability
