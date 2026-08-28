@@ -117,7 +117,6 @@ sim_minimal <- function(mn_offspring = 0.90,
                       index_cases = index_cases,
                       initial_immune = initial_immune)
 
-bp
   #-----------------------------------------------------------------------------
   # format output of sim_minimal into dataframe w/ 1 row per infected individual
 
