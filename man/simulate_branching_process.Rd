@@ -106,4 +106,10 @@ simulate_branching_process(
 This function creates a named list containing the output of simulating a stochastic branching
 process.
 }
+\seealso{
+Other simulation: 
+\code{\link{sim_minimal}()},
+\code{\link{sim_single_outbreak}()},
+\code{\link{spillover}()}
+}
 \concept{simulation}
