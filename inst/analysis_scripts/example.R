@@ -12,8 +12,8 @@ library(igraph)
 library(ggraph)
 library(cowplot)
 
-devtools::install_github("mrc-ide/wastewatchR@dev", force = TRUE)
-
+# NOTE! You will have needed to install the paper1_version1 release of wastewatchR
+# (see README)
 library(wastewatchR)
 
 # 1. Simulate spillovers over a 1-yr period ------------------------------------
@@ -137,34 +137,14 @@ det <- calculate_wastewater_ttd(wastewater_number_shedding_time_series = nts,
                                 detection_approach = "logistic_curve",
                                 detection_params)
 
-# 4. Clinical detection probability --------------------------------------------
-# ------------------------------------------------------------------------------
-
-# Compute probability of clinical detection each day based on delay distributions
-# and assumed probabilities of symptoms/healthcare seeking/diagnosis.
-det_clinical <- calculate_clinical_detection_prob(nts = nts,
-                                                  det = det,
-                                                  delay_onset = dgamma(0:21,
-                                                                       shape = shape_onset,
-                                                                       rate = rate_onset),
-                                                  delay_seek = dgamma(0:21,
-                                                                      shape = shape_hc,
-                                                                      rate = rate_hc),
-                                                  delay_diag = dgamma(0:21,
-                                                                      shape = shape_diag,
-                                                                      rate = rate_diag),
-                                                  prob_symptomatic = prob_symptomatic,
-                                                  prob_seek_healthcare = prob_seek_healthcare,
-                                                  prob_diagnosis = prob_diagnosis)
-
-# 5. Take a look at results ----------------------------------------------------
+# 4. Take a look at results ----------------------------------------------------
 # ------------------------------------------------------------------------------
 
 ##### A. infections (by type) and viral load shed to wastewater
 
 # Approximate start and mid points for each month (non-leap year)
-month_start <- c(1, 32, 60, 91, 121, 152,
-                 182, 213, 244, 274, 305, 335, 365)
+month_start <- c(0, 31, 59, 90, 120, 151,
+                 181, 212, 243, 273, 304, 334, 364)
 p1 <- ggplot(linelist) +
   theme_classic() +
   theme(legend.position = "top",
@@ -177,7 +157,8 @@ p1 <- ggplot(linelist) +
     x = time_infection,
     fill = factor(type, levels = c("Human-to-human", "Animal-to-human"))
   ),
-  binwidth = 1
+  binwidth = 1,
+  boundary = 0
   ) +
   scale_fill_manual(values = c("#826699", "#9CAF88"), name = "Source") +
   xlab(NULL) +
@@ -185,7 +166,7 @@ p1 <- ggplot(linelist) +
   scale_x_continuous(
     breaks = month_start, # tick marks at start of each month
     labels = c(month.abb, " "),
-    limits = c(1, 365),
+    limits = c(0, 365),
     expand = c(0.01,0)
   ) +
   scale_y_continuous(
@@ -206,7 +187,7 @@ p2 <- ggplot(det$sampled_data)+
   scale_x_continuous(
     breaks = month_start, # tick marks at start of each month
     labels = c(NULL), # labels for months
-    limits = c(1, 365),
+    limits = c(0, 365),
     expand = c(0.01,0)
   ) +
   xlab(NULL)+
@@ -214,26 +195,23 @@ p2 <- ggplot(det$sampled_data)+
   theme_classic()+
   theme(text = element_text(size = 15))
 
-##### C. probability of clinical detection & stochastic detection events
+##### C. clinical stochastic detection events
 
-p3 <- ggplot(det_clinical)+
-  geom_ribbon(aes(x = day, ymax = prob_detection_clinical, ymin = 0), fill = "#5B7C99", alpha = 0.5)+
-  geom_line(aes(y = prob_detection_clinical, x = day), colour = "#5B7C99", alpha = 0.7)+
-  geom_vline(data = linelist, aes(xintercept = time_diagnosis), linewidth = 0.5, colour = "coral3")+
-  xlab(NULL)+
+p3 <- ggplot(linelist%>%filter(!is.na(time_diagnosis)))+
+  geom_vline(aes(xintercept = time_diagnosis), linewidth = 0.5, colour = "coral3")+
   scale_x_continuous(
     breaks = month_start,        # tick marks at start of each month
     labels = c(month.abb, " "),           # labels for months
-    limits = c(1, 365),
+    limits = c(0, 365),
     expand = c(0.01,0)
   ) +
   scale_x_continuous(
     breaks = month_start,                 # tick marks at start of each month
     labels = c(month.abb, " "),
-    limits = c(1, 365),
+    limits = c(0, 365),
     expand = c(0.01,0)
-  ) +
-  ylab("Probability detected\nclinically ")+
+  )+
+  xlab("Stochastic detections over time")+
   theme_classic()+
   theme(axis.text.x = element_text(hjust = -0.66),
         text = element_text(size = 15))
@@ -299,7 +277,7 @@ p0 <- ggraph(g, layout = flipped_layout) +
   scale_x_continuous(
     breaks = month_start,        # tick marks at start of each month
     labels = NULL,           # labels for months
-    limits = c(1, 365),
+    limits = c(0, 365),
     expand = c(0.01,0)
   ) +
   scale_y_continuous(labels = c(5,4,3,2,1,0), breaks = c(-5,-4,-3,-2,-1,0))+

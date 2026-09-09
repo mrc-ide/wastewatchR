@@ -19,6 +19,8 @@ circular_dist <- function(t, tmax, P = 365) {
   return(dist)
 }
 
+#' Gaussian forcing function for spillover
+#' @export
 gaussian_forcing <- function(t, tmax, P = 365, b = 0, d = 0, sigma = 30) {
 
   # Where t is the day and tmax is the peak (between 0-P)
