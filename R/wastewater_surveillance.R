@@ -70,6 +70,11 @@ generate_number_shedding_time_series <- function(branching_process_output, shedd
 
 }
 
+#' Calculate wastewater time to detection
+#'
+#' Calculates the time to detection of wastewater shedding using the
+#' specified sampling method and detection approach.
+#'
 #' @param wastewater_number_shedding_time_series Output from generate_number_shedding_time_series
 #' @param sampling_frequency The frequency of wastewate sampling, with 1 being daily, 7 being weekly, 14 being fortnightly
 #' @param sampling_method The method used, either "autosampler", "grab" or "moore_swab"
@@ -109,8 +114,11 @@ calculate_wastewater_ttd <- function(wastewater_number_shedding_time_series,
   }
 
   ## Checking that duration is speciifed if the user has selected moore_swab as sampling_method
-  if (sampling_method == "moore_swab" ){
-    stop("if sampling method is moore_swab,'detection_params$duration' must be a number of days >=1")
+  if (sampling_method == "moore_swab" &&
+      (is.null(detection_params$duration) ||
+       !is.numeric(detection_params$duration) ||
+       detection_params$duration < 1)) {
+    stop("If sampling_method is 'moore_swab', detection_params$duration must be a number of days >= 1")
   }
 
   ## If sampling method = moore_swab, calculate mean shedding over moore swab window
