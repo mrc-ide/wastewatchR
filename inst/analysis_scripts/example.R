@@ -12,8 +12,8 @@ library(igraph)
 library(ggraph)
 library(cowplot)
 
-devtools::install_github("mrc-ide/wastewatchR@dev", force = TRUE)
-
+# NOTE! You will have needed to install the paper1_version1 release of wastewatchR
+# (see README)
 library(wastewatchR)
 
 # 1. Simulate spillovers over a 1-yr period ------------------------------------
