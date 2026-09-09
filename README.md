@@ -23,3 +23,11 @@ using:
 ``` r
 devtools::install_github("mrc-ide/wastewatchR")
 ```
+
+You can install the version of `wastewatchR` used in the manuscript:
+“The public health value of wastewater surveillance for viruses with
+pandemic potential: a modelling study” using:
+
+``` r
+devtools::install_github("mrc-ide/wastewatchR@paper1_version1")
+```
