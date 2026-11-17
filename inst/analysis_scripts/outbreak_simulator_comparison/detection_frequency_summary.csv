@@ -1,0 +1,16 @@
+"parameter_set","R0","method","wastewater_rate","wastewater_lower","wastewater_upper","clinical_rate","clinical_lower","clinical_upper","n"
+"R0 = 0.2",0.2,"Simple single outbreak",1,1,1,0.79,0.710167585530688,0.869832414469312,100
+"R0 = 0.2",0.2,"Evolutionary single outbreak",1,1,1,0.78,0.698807724505345,0.861192275494655,100
+"R0 = 0.2",0.2,"Multi-outbreak simulator",1,1,1,0.71,0.621062637772419,0.798937362227581,100
+"R0 = 0.4",0.4,"Simple single outbreak",1,1,1,0.87,0.804084526854463,0.935915473145537,100
+"R0 = 0.4",0.4,"Evolutionary single outbreak",1,1,1,0.82,0.74469925896779,0.89530074103221,100
+"R0 = 0.4",0.4,"Multi-outbreak simulator",1,1,1,0.88,0.816307538907654,0.943692461092346,100
+"R0 = 0.6",0.6,"Simple single outbreak",1,1,1,0.93,0.879991184777082,0.980008815222918,100
+"R0 = 0.6",0.6,"Evolutionary single outbreak",1,1,1,0.97,0.936564904665905,1,100
+"R0 = 0.6",0.6,"Multi-outbreak simulator",1,1,1,0.94,0.893452579018811,0.986547420981189,100
+"R0 = 0.8",0.8,"Simple single outbreak",1,1,1,0.99,0.97049824623271,1,100
+"R0 = 0.8",0.8,"Evolutionary single outbreak",1,1,1,0.99,0.97049824623271,1,100
+"R0 = 0.8",0.8,"Multi-outbreak simulator",1,1,1,0.98,0.95256,1,100
+"R0 = 0.95",0.95,"Simple single outbreak",1,1,1,1,1,1,100
+"R0 = 0.95",0.95,"Evolutionary single outbreak",1,1,1,1,1,1,100
+"R0 = 0.95",0.95,"Multi-outbreak simulator",1,1,1,1,1,1,100
