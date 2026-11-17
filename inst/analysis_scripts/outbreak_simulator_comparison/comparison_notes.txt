@@ -1,0 +1,19 @@
+Three-year spillover and observation window; 100 replicates per R0 set and method.
+Flat spillover rate: 0.1/day (36.5/year), as agreed for this comparison.
+Both single-outbreak functions share the same daily Poisson spillover schedule. The multi-outbreak simulator draws exponential spillover intervals internally; its rate is set to the equivalent annual rate, so event times are not paired.
+Absolute P(severe) = 0.1; the simple function receives P(severe | symptoms) = 0.5.
+Clinical detection is harmonised by applying P(diagnosis | healthcare sought) = 0.1 to all methods.
+Wastewater: weekly grab samples, example shedding profile, and logistic coefficient posterior means.
+The simple simulator keeps its susceptible fraction fixed; the evolutionary and multi-outbreak functions decrease susceptible count as infections accrue.
+The simple simulator is capped at 100 generations; the evolutionary and multi-outbreak simulations are capped at 50,000 infections.
+simulate_branching_process currently does not use tf to stop generation. This script allows up to 250 outbreaks and filters infections and detection to the three-year window.
+Outbreak size is infections occurring within the three-year window.
+This run emitted three recycling warnings from sim_single_outbreak's infector assignment. These occurred with the finite generation cap; treat those simple-simulator chains as potentially truncated or mislinked.
+
+Additional implementation details:
+- In sim_single_outbreak, prob_severe is conditional on symptoms. In the evolutionary and multi-outbreak functions it is absolute among all infections. We used P(symptomatic)=0.20 and absolute P(severe)=0.10, so the simple function received prob_severe=0.50 and the other two received 0.10.
+- sim_single_outbreak has prob_diagnosis and healthcare_to_diagnosis_dist. The evolutionary single-outbreak and multi-outbreak functions only record healthcare seeking and its time; they do not model diagnosis probability or diagnosis time. For a common clinical endpoint, the script set the simple function internal diagnosis probability to 1 and delay to 0, then applied an external 0.10 diagnosis draw after healthcare seeking to all methods.
+- Seroconversion and seroreversion are modeled by the evolutionary and multi-outbreak functions, but not by sim_single_outbreak. They were not used for the detection comparison. Beneficial mutation probability was set to zero in all three.
+- The simple simulator keeps its susceptible fraction fixed and takes initial_immune as a proportion. The evolutionary and multi-outbreak functions decrement an absolute susceptible count. The evolutionary function resets that count on each spillover call; simulate_branching_process shares it across outbreaks within a run.
+
+Post-comparison code update: simulate_single_outbreak_evolutionary now interprets prob_severe as conditional on symptoms and includes diagnosis probability and diagnosis time. The saved CSVs and plots above were generated before that change and reflect the earlier API. The comparison script has been updated for a future rerun; these outputs have not been rerun.
